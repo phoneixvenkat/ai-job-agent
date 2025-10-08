@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated outputs & logs
+out/
+artifacts/
+*.log
+
+# Playwright caches/binaries
+**/ms-playwright/
+**/playwright/.cache/
+**/playwright/driver/
+**/node.exe
+
+# OS/Editor
+.vscode/
+.DS_Store
+Thumbs.db
+
