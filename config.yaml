@@ -1,0 +1,29 @@
+identity:
+  name: "venkatasaikumarerla"
+  email: "venkatasaikumarerla@gmail.com"
+  phone: "+1-203-627-5831"
+  links:
+    linkedin: "https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
+    github: ""
+    portfolio: ""
+
+filters:
+  required: ["data|analyst|analytics|ml|machine learning|research|bioinformatics|healthcare|intern|junior|entry"]
+  exclude: ["senior|staff|principal|lead|director|architect", "8\\+ years|10\\+ years"]
+  top_n: 20
+
+sources:
+  greenhouse: ["flatiron-health","tempuslabs","trialspark","truveta","komodohealth","veranahealth","aetion","oscar","insitro","natera","ginkgo-bioworks","nyulangone","mountsinai"]
+  lever: ["databricks","ramp","notion","figma","openai","anduril","pilot"]
+
+resume_engine:
+  out_dir: "out"
+  bullets_file: "data/bullet_bank.yaml"
+  base_resume_file: "data/base_resume.yaml"
+  stopwords_file: "data/stopwords.txt"
+
+autofill:
+  headless: false
+  human_review_ms: 120000
+
+log_csv: "artifacts/applications.csv"
