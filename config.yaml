@@ -1,11 +1,13 @@
 identity:
-  name: "venkatasaikumarerla"
+  name: "Venkata Sai Kumar Erla"
   email: "venkatasaikumarerla@gmail.com"
   phone: "+1-203-627-5831"
   links:
     linkedin: "https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
-    github: ""
-    portfolio: ""
+    github: "https://github.com/phoneixvenkat"
+    portfolio: "https://venkat-portfolio-chi.vercel.app"   # or your current URL
+    handshake: "https://newhaven.joinhandshake.com/profiles/8b8dbnvenkatasaikumar999"
+
 
 filters:
   required: ["data|analyst|analytics|ml|machine learning|research|bioinformatics|healthcare|intern|junior|entry"]
