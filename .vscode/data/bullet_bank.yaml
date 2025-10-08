@@ -1,0 +1,25 @@
+projects:
+  clinical-trial-matcher:
+    tags: ["nlp","python","healthcare","pandas","regex","matching","transformers"]
+    title: "Clinical Trial Matcher (NLP)"
+    bullets:
+      - "Built NLP pipeline (spaCy + regex) to normalize trial criteria; improved match precision by 18%."
+      - "Parsed 5k+ trial records; engineered keyword/semantic features; exported ranked matches."
+  sparkify:
+    tags: ["pyspark","sql","ml","churn","eda","pipeline"]
+    title: "Sparkify Churn Prediction (PySpark)"
+    bullets:
+      - "Processed 12M events in PySpark; engineered session features; trained GBM/LogReg (+9% AUC)."
+      - "Productionized ETL & data quality checks; delivered churn cohort dashboards."
+  emg:
+    tags: ["signal","biomedical","python","numpy"]
+    title: "EMG Signal Analysis"
+    bullets:
+      - "Filtered EMG (band-pass/notch); extracted RMS/MAV/ZCR for gesture classification."
+      - "Automated visualization & reports; improved feature stability across sessions by 11%."
+
+general_bullets:
+  - text: "Wrote modular Python with type hints & tests; reduced pipeline bugs."
+    tags: ["python","testing","pipeline"]
+  - text: "Built SQL joins/window functions; cut report runtime by 35%."
+    tags: ["sql","analytics"]
