@@ -1,13 +1,34 @@
-name: "venkatasaikumarerla"
-email: "venkatasaikumarerla@gmail.com"
+name: "VENKATASAIKUMAR ERLA"
+email: "venkatasaikumarerla@email.com"
 phone: "+1-203-627-5831"
-location: "New York, NY"
+location: "West Haven, CT"
 links:
-  - "LinkedIn: https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
+  - "https://linkedin.com/in/venkata-sai-kumar-erla-327155263"
+  - "https://github.com/venkatasaikumarerla"
+
 summary: >
-  Graduate student focused on data analytics & ML for healthcare. Strong in SQL and Python (pandas, numpy).
-education:
-  - school: "NYU – M.S."
-    dates: "2024–2026"
+  Master’s student in Data Science (University of New Haven, expected 2026) with
+  strong foundations in ML, DL, and NLP. Skilled in Python, SQL, R, TensorFlow,
+  and AWS; hands-on with text summarization and sentiment analysis; experienced
+  building data pipelines, analysis, and visualizations. Seeking data/ML roles
+  to apply AI to impactful real-world problems.
+
 skills:
-  - "Python, SQL, Pandas, NumPy, scikit-learn, PySpark"
+  - "Programming: Python, R, SQL"
+  - "ML/AI: scikit-learn, TensorFlow, NLP (NLTK, spaCy), Deep Learning (LSTM)"
+  - "Data: Pandas, NumPy, Matplotlib, Tableau"
+  - "Cloud/Big Data: AWS (S3, Athena, Glue basics), Hadoop (academic exposure)"
+  - "Workflow: GitHub, Jupyter, Agile/Scrum"
+
+education:
+  - school: "University of New Haven – Tagliatela College of Engineering"
+    degree: "M.S. in Data Science"
+    dates: "Expected May 2026"
+    bullets:
+      - "Coursework: Machine Learning, Deep Learning, NLP, Big Data, Data Visualization, Leadership in Data & AI Products, Data Ethics"
+      - "Achievements: Dean’s Scholarship recipient"
+  - school: "Chalapathi Institute of Engineering & Technology, Lam, India"
+    degree: "B.Tech in Computer Science and Engineering"
+    dates: "2020 – 2024"
+
+# (Projects section is generated dynamically from bullet_bank.yaml based on JD)

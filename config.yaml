@@ -1,22 +1,29 @@
 identity:
-  name: "Venkata Sai Kumar Erla"
-  email: "venkatasaikumarerla@gmail.com"
+  name: "VENKATASAIKUMAR ERLA"
+  email: "venkatasaikumarerla@email.com"
   phone: "+1-203-627-5831"
   links:
-    linkedin: "https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
-    github: "https://github.com/phoneixvenkat"
-    portfolio: "https://venkat-portfolio-chi.vercel.app"   # or your current URL
-    handshake: "https://newhaven.joinhandshake.com/profiles/8b8dbnvenkatasaikumar999"
-
+    linkedin: "https://linkedin.com/in/venkata-sai-kumar-erla-327155263"
+    github: "https://github.com/venkatasaikumarerla"
+  location: "West Haven, CT, USA"
 
 filters:
-  required: ["data|analyst|analytics|ml|machine learning|research|bioinformatics|healthcare|intern|junior|entry"]
-  exclude: ["senior|staff|principal|lead|director|architect", "8\\+ years|10\\+ years"]
+  # keep broad — we’ll prune later via preview
+  required: ["analyst|analytics|ml|machine learning|data|scientist|intern|entry|junior"]
+  exclude: ["senior|staff|principal|lead|director|architect","8\\+ years|10\\+ years"]
   top_n: 20
 
 sources:
-  greenhouse: ["flatiron-health","tempuslabs","trialspark","truveta","komodohealth","veranahealth","aetion","oscar","insitro","natera","ginkgo-bioworks","nyulangone","mountsinai"]
-  lever: ["databricks","ramp","notion","figma","openai","anduril","pilot"]
+  greenhouse: ["truveta","natera"]
+  lever: ["notion","databricks","ramp"]
+  smartrecruiters: ["snowflake","doordash"]
+  ashby: ["anthropic","retellai"]
+  workable: ["companyslug"]      # replace with real subdomain
+  recruitee: ["companyslug"]     # replace with real subdomain
+  workday:
+    - "https://example.wd1.myworkdayjobs.com/en-US/ExternalCareers"
+  handshake_public:
+    - "https://career-center.yourschool.edu/jobs"  # only public pages work
 
 resume_engine:
   out_dir: "out"
@@ -27,5 +34,29 @@ resume_engine:
 autofill:
   headless: false
   human_review_ms: 120000
+
+categories:
+  enabled: true
+  map:
+    healthcare: ["health","clinical","patient","hospital","oncology","bio","pharma","genomic","trial"]
+    ecommerce:  ["shop","retail","marketplace","sku","checkout","fulfillment","e-commerce"]
+    fintech:    ["bank","credit","payment","ledger","risk","kyc","fintech"]
+    edtech:     ["education","school","student","campus","lms","edtech"]
+    gov:        ["federal","state","city","municipal","public sector","government"]
+    other:      []
+
+preview:
+  before_upload: true
+
+history:
+  store: "artifacts/applied_history.csv"
+
+report:
+  daily_excel: true
+  dir: "reports"
+
+storage:
+  keep_last: 80
+  max_age_days: 21
 
 log_csv: "artifacts/applications.csv"

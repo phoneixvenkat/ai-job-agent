@@ -1,25 +1,33 @@
 projects:
-  clinical-trial-matcher:
-    tags: ["nlp","python","healthcare","pandas","regex","matching","transformers"]
-    title: "Clinical Trial Matcher (NLP)"
+  summarization:
+    title: "Extractive Text Summarization – Web App"
+    tags: ["nlp","summarization","nltk","spacy","text","python","ml","web"]
     bullets:
-      - "Built NLP pipeline (spaCy + regex) to normalize trial criteria; improved match precision by 18%."
-      - "Parsed 5k+ trial records; engineered keyword/semantic features; exported ranked matches."
-  sparkify:
-    tags: ["pyspark","sql","ml","churn","eda","pipeline"]
-    title: "Sparkify Churn Prediction (PySpark)"
+      - "Built extractive summarizer in Python using NLP pipelines (NLTK, spaCy) and ML heuristics."
+      - "Delivered a web interface for real-time summaries improving accessibility for non-technical users."
+      - "Improved ROUGE scores by ~12% over baseline approaches."
+
+  sentiment:
+    title: "Sentiment Analysis on Twitter (LSTM)"
+    tags: ["nlp","sentiment","lstm","deep learning","pytorch","tensorflow","classification"]
     bullets:
-      - "Processed 12M events in PySpark; engineered session features; trained GBM/LogReg (+9% AUC)."
-      - "Productionized ETL & data quality checks; delivered churn cohort dashboards."
-  emg:
-    tags: ["signal","biomedical","python","numpy"]
-    title: "EMG Signal Analysis"
+      - "Trained LSTM model to classify sentiment on large Twitter datasets with ~85% accuracy."
+      - "Engineered text preprocessing & embeddings; compared classical vs DL classifiers."
+      - "Visualized trends in interactive dashboards to explain topical sentiment over time."
+
+  analytics:
+    title: "Data Analytics & Visualization"
+    tags: ["analytics","pandas","sql","tableau","matplotlib","numpy","eda","dashboards"]
     bullets:
-      - "Filtered EMG (band-pass/notch); extracted RMS/MAV/ZCR for gesture classification."
-      - "Automated visualization & reports; improved feature stability across sessions by 11%."
+      - "Performed EDA with Pandas/SQL; automated feature extraction and data cleaning."
+      - "Developed Tableau/Matplotlib dashboards to communicate insights to stakeholders."
+      - "Applied statistical testing and model evaluation to support decisions."
 
 general_bullets:
-  - text: "Wrote modular Python with type hints & tests; reduced pipeline bugs."
-    tags: ["python","testing","pipeline"]
-  - text: "Built SQL joins/window functions; cut report runtime by 35%."
-    tags: ["sql","analytics"]
+  - text: "Implemented robust data pipelines with Pandas/Numpy; wrote clean, modular Python."
+    tags: ["python","pandas","numpy","pipeline"]
+  - text: "Collaborated in Agile sprints; version-controlled with GitHub and CI-friendly structure."
+    tags: ["agile","github","workflow"]
+  - text: "Deployed experiments on AWS S3/Athena (basics) for data storage and querying."
+    tags: ["aws","s3","athena"]
+
