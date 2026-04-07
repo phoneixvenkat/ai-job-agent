@@ -1,0 +1,13 @@
+name: "venkatasaikumarerla"
+email: "venkatasaikumarerla@gmail.com"
+phone: "+1-203-627-5831"
+location: "New York, NY"
+links:
+  - "LinkedIn: https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
+summary: >
+  Graduate student focused on data analytics & ML for healthcare. Strong in SQL and Python (pandas, numpy).
+education:
+  - school: "NYU – M.S."
+    dates: "2024–2026"
+skills:
+  - "Python, SQL, Pandas, NumPy, scikit-learn, PySpark"
