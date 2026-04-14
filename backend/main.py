@@ -225,3 +225,59 @@ def excel_report():
 @app.get("/api/patterns")
 def patterns():
     return get_recommendations()
+
+# ── Follow-up Agent ────────────────────────────────────
+@app.get("/api/followups")
+def get_followups():
+    from agents.followup_agent import get_pending_followups, generate_followup_email
+    pending = get_pending_followups()
+    drafts  = [generate_followup_email(app) for app in pending[:5]]
+    return {"followups": drafts, "count": len(drafts)}
+
+@app.post("/api/followups/done/{app_id}")
+def mark_done(app_id: int):
+    from agents.followup_agent import mark_followup_done
+    mark_followup_done(app_id)
+    return {"message": "Follow-up marked done"}
+
+# ── Interview Prep ──────────────────────────────────────
+class PrepRequest(BaseModel):
+    job: dict
+
+@app.post("/api/interview/prep")
+def interview_prep(req: PrepRequest):
+    from agents.interview_prep import generate_interview_prep
+    result = generate_interview_prep(req.job, resume_store["text"])
+    return result
+
+# ── Orchestrator ────────────────────────────────────────
+class OrchestratorRequest(BaseModel):
+    roles:    list
+    location: Optional[str] = "Remote"
+    use_llm:  Optional[bool] = False
+
+@app.post("/api/orchestrate")
+def orchestrate(req: OrchestratorRequest):
+    if not resume_store["text"]:
+        raise HTTPException(status_code=400, detail="Upload resume first")
+    from agents.orchestrator import run_full_pipeline
+    result = run_full_pipeline(req.roles, req.location, resume_store["text"], req.use_llm)
+    return result
+
+# ── Dry Run ─────────────────────────────────────────────
+@app.post("/api/jobs/dryrun")
+def dry_run(req: SearchRequest):
+    if not resume_store["text"]:
+        raise HTTPException(status_code=400, detail="Upload resume first")
+    cfg    = yaml.safe_load(open(ROOT/"config.yaml","r",encoding="utf-8"))
+    result = run_scout(cfg, req.roles, req.location)
+    dup    = run_duplicate_agents(result["jobs"])
+    analyzed = run_analyst(dup["clean_jobs"], resume_store["text"])
+    return {
+        "mode":     "dry_run",
+        "message":  "No applications submitted",
+        "jobs":     analyzed[:5],
+        "total":    result["total"],
+        "matched":  result["matched"],
+        "clean":    dup["clean_count"]
+    }
