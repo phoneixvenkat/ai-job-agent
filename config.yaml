@@ -1,62 +1,46 @@
-identity:
-  name: "VENKATASAIKUMAR ERLA"
-  email: "venkatasaikumarerla@email.com"
-  phone: "+1-203-627-5831"
-  links:
-    linkedin: "https://linkedin.com/in/venkata-sai-kumar-erla-327155263"
-    github: "https://github.com/venkatasaikumarerla"
-  location: "West Haven, CT, USA"
+sources:
+  greenhouse:
+    - truveta
+    - natera
+    - insitro
+    - recursion
+    - tempus
+    - flatiron-health
+    - veracyte
+    - guardant-health
+    - grail
+    - color-genomics
+    - freenome
+    - pathos-ai
+    - komodohealth
+    - arcus-biosciences
+
+  lever:
+    - scale-ai
+    - cohere
+    - weights-biases
+    - dataiku
+    - snorkel-ai
+    - dbtlabs
+    - activeloop
 
 filters:
-  # keep broad — we’ll prune later via preview
-  required: ["analyst|analytics|ml|machine learning|data|scientist|intern|entry|junior"]
-  exclude: ["senior|staff|principal|lead|director|architect","8\\+ years|10\\+ years"]
+  required:
+    - "data|analyst|scientist|machine.learning|ml|ai|engineer|nlp|llm|intelligence|research"
+  exclude:
+    - "intern(?!.*senior)|director|vp |vice president|principal(?!.*engineer)|c-level"
   top_n: 20
+  min_fit_score: 0
 
-sources:
-  greenhouse: ["truveta","natera"]
-  lever: ["notion","databricks","ramp"]
-  smartrecruiters: ["snowflake","doordash"]
-  ashby: ["anthropic","retellai"]
-  workable: ["companyslug"]      # replace with real subdomain
-  recruitee: ["companyslug"]     # replace with real subdomain
-  workday:
-    - "https://example.wd1.myworkdayjobs.com/en-US/ExternalCareers"
-  handshake_public:
-    - "https://career-center.yourschool.edu/jobs"  # only public pages work
-
-resume_engine:
-  out_dir: "out"
-  bullets_file: "data/bullet_bank.yaml"
-  base_resume_file: "data/base_resume.yaml"
-  stopwords_file: "data/stopwords.txt"
-
-autofill:
-  headless: false
-  human_review_ms: 120000
-
-categories:
-  enabled: true
-  map:
-    healthcare: ["health","clinical","patient","hospital","oncology","bio","pharma","genomic","trial"]
-    ecommerce:  ["shop","retail","marketplace","sku","checkout","fulfillment","e-commerce"]
-    fintech:    ["bank","credit","payment","ledger","risk","kyc","fintech"]
-    edtech:     ["education","school","student","campus","lms","edtech"]
-    gov:        ["federal","state","city","municipal","public sector","government"]
-    other:      []
-
-preview:
-  before_upload: true
-
-history:
-  store: "artifacts/applied_history.csv"
-
-report:
-  daily_excel: true
-  dir: "reports"
-
-storage:
-  keep_last: 80
-  max_age_days: 21
-
-log_csv: "artifacts/applications.csv"
+job_preferences:
+  roles:
+    - "Data Scientist"
+    - "Machine Learning Engineer"
+    - "AI Engineer"
+    - "ML Engineer"
+    - "Data Analyst"
+    - "NLP Engineer"
+    - "Research Scientist"
+  location: "Remote"
+  min_salary: 80000
+  experience_level: "mid"

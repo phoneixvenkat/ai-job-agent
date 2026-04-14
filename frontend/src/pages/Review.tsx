@@ -1,46 +1,150 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
+const API = 'http://127.0.0.1:8000';
 const card = (style = {}) => ({ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 18, ...style });
 
 export default function Review() {
-  const [step, setStep] = useState(0);
-  const jobs = [
-    { title: 'Data Scientist', org: 'Natera', fit: 87, salary: '$95-120k', resume: 'resume_natera.docx', cover: 'cover_natera.docx' },
-    { title: 'ML Engineer', org: 'Truveta', fit: 79, salary: '$85-110k', resume: 'resume_truveta.docx', cover: 'cover_truveta.docx' },
-  ];
-  const job = jobs[step] || jobs[0];
+  const [jobs, setJobs]         = useState<any[]>([]);
+  const [step, setStep]         = useState(0);
+  const [loading, setLoading]   = useState(false);
+  const [status, setStatus]     = useState('');
+  const [tailored, setTailored] = useState<any>(null);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('selected_jobs');
+    if (stored) {
+      setJobs(JSON.parse(stored));
+    } else {
+      setJobs([
+        { title: 'Data Scientist', org: 'Natera', fit_score: 87, salary: { min: 95000, max: 120000 }, source: 'Greenhouse', location: 'Remote', url: '#' },
+        { title: 'ML Engineer', org: 'Truveta', fit_score: 79, salary: { min: 85000, max: 110000 }, source: 'Greenhouse', location: 'Remote', url: '#' },
+      ]);
+    }
+  }, []);
+
+  const job = jobs[step];
+
+  useEffect(() => {
+    if (job) generateDocs();
+  }, [step]);
+
+  const generateDocs = async () => {
+    if (!job) return;
+    setGenerating(true);
+    setTailored(null);
+    try {
+      const r = await axios.post(`${API}/api/resume/tailor`, { job, use_llm: false });
+      setTailored(r.data);
+    } catch (e) {
+      setTailored({ cover_text: 'Could not generate — upload resume first', resume_path: '', cover_path: '' });
+    }
+    setGenerating(false);
+  };
+
+  const handleYes = async () => {
+    if (!job) return;
+    setLoading(true);
+    try {
+      await axios.post(`${API}/api/jobs/apply`, {
+        job,
+        resume_path: tailored?.resume_path || '',
+        cover_path:  tailored?.cover_path  || '',
+        status:      'applied',
+        explanation: `Applied with ${job.fit_score}% fit score`
+      });
+      setStatus(`✅ Applied to ${job.title} at ${job.org}!`);
+      setTimeout(() => { setStatus(''); setStep(s => s + 1); }, 2000);
+    } catch (e) {
+      setStatus('❌ Failed to log application');
+    }
+    setLoading(false);
+  };
+
+  const handleNo = async () => {
+    if (!job) return;
+    setLoading(true);
+    try {
+      await axios.post(`${API}/api/jobs/skip`, {
+        job, reason: 'User skipped during review'
+      });
+      setStatus(`⏭️ Skipped ${job.title} at ${job.org}`);
+      setTimeout(() => { setStatus(''); setStep(s => s + 1); }, 1500);
+    } catch (e) {
+      setStep(s => s + 1);
+    }
+    setLoading(false);
+  };
+
+  if (!job) return (
+    <div style={{ padding: 28, animation: 'fadeUp 0.5s ease' }}>
+      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Review & Apply ✅</div>
+      <div style={{ ...card(), textAlign: 'center', padding: 48 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+        <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>All Done!</div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+          You've reviewed all selected jobs. Check Applications to track your progress.
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ padding: 28, animation: 'fadeUp 0.5s ease' }}>
-      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Review & Apply 📄</div>
-      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 24 }}>Preview your tailored resume and cover letter before submitting</div>
+      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Review & Apply ✅</div>
+      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 24 }}>
+        Preview your tailored documents before submitting
+      </div>
 
       {/* Progress */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {jobs.map((j, i) => (
           <div key={i} onClick={() => setStep(i)}
-            style={{ padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 13, background: i === step ? 'rgba(37,99,235,0.25)' : 'rgba(255,255,255,0.04)', border: `1px solid ${i === step ? 'rgba(37,99,235,0.4)' : 'rgba(255,255,255,0.07)'}`, color: i === step ? '#60A5FA' : 'rgba(255,255,255,0.45)' }}>
-            {j.org}
+            style={{ padding: '6px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 12,
+              background: i === step ? 'rgba(37,99,235,0.25)' : i < step ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${i === step ? 'rgba(37,99,235,0.4)' : i < step ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
+              color: i === step ? '#60A5FA' : i < step ? '#6EE7B7' : 'rgba(255,255,255,0.45)' }}>
+            {i < step ? '✅' : ''} {j.org}
           </div>
         ))}
       </div>
 
-      {/* Job header */}
+      {/* Status */}
+      {status && (
+        <div style={{ padding: '12px 16px', borderRadius: 12, marginBottom: 16, fontSize: 13, fontWeight: 500,
+          background: status.includes('✅') ? 'rgba(16,185,129,0.1)' : status.includes('❌') ? 'rgba(244,63,94,0.1)' : 'rgba(245,158,11,0.1)',
+          border: `1px solid ${status.includes('✅') ? 'rgba(16,185,129,0.3)' : status.includes('❌') ? 'rgba(244,63,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          color: status.includes('✅') ? '#6EE7B7' : status.includes('❌') ? '#FB7185' : '#FCD34D' }}>
+          {status}
+        </div>
+      )}
+
+      {/* Job Header */}
       <div style={{ ...card(), marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 600 }}>{job.title}</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>{job.org} · {job.salary}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
+            {job.org} · {job.location} · {job.source}
+          </div>
+          {job.salary && (
+            <div style={{ fontSize: 13, color: '#6EE7B7', marginTop: 4 }}>
+              💰 ${Number(job.salary.min||0).toLocaleString()} — ${Number(job.salary.max||0).toLocaleString()}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#10B981' }}>{job.fit}%</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: job.fit_score >= 70 ? '#10B981' : job.fit_score >= 40 ? '#F59E0B' : '#F43F5E' }}>
+            {job.fit_score}%
+          </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Fit Score</div>
         </div>
       </div>
 
-      {/* Quality Score */}
+      {/* Quality Scores */}
       <div style={{ ...card(), marginBottom: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Application Quality Score</div>
-        {[['Resume Match', job.fit, '#10B981'], ['Cover Letter', 92, '#2563EB'], ['ATS Score', 78, '#F59E0B']].map(([label, pct, color]) => (
+        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>Application Quality</div>
+        {[['Resume Match', job.fit_score, '#10B981'], ['Cover Letter', 88, '#2563EB'], ['ATS Score', job.ats_score || 72, '#F59E0B']].map(([label, pct, color]) => (
           <div key={label as string} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', width: 120 }}>{label as string}</div>
             <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
@@ -51,45 +155,57 @@ export default function Review() {
         ))}
       </div>
 
-      {/* Preview panels */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-        <div style={card()}>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📄 RESUME PREVIEW</div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#fff' }}>VENKATASAIKUMAR ERLA</div>
-            <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 12, fontSize: 11 }}>West Haven, CT | venkatasaikumarerla@email.com</div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>SUMMARY</div>
-            <div style={{ color: 'rgba(255,255,255,0.55)', marginBottom: 12 }}>Results-driven Data Scientist with expertise in ML pipelines, NLP, and clinical data analysis. Proven track record...</div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>SKILLS</div>
-            <div style={{ color: 'rgba(255,255,255,0.55)' }}>Python · TensorFlow · NLP · AWS · SQL · Scikit-learn</div>
-          </div>
-          <button style={{ marginTop: 12, width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>⬇️ Download Resume</button>
+      {/* Document Previews */}
+      {generating ? (
+        <div style={{ ...card(), textAlign: 'center', padding: 32, marginBottom: 20 }}>
+          <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Generating tailored resume and cover letter...</div>
         </div>
-
-        <div style={card()}>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📝 COVER LETTER PREVIEW</div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200 }}>
-            <div style={{ marginBottom: 8 }}>Dear Hiring Team at <span style={{ color: '#60A5FA' }}>{job.org}</span>,</div>
-            <div style={{ marginBottom: 8 }}>I am excited to apply for the <span style={{ color: '#60A5FA' }}>{job.title}</span> position. My experience in machine learning and data science directly aligns with your requirements...</div>
-            <div style={{ marginBottom: 8 }}>My background in NLP and Python-based ML pipelines positions me well to contribute to your team from day one...</div>
-            <div>Thank you for your consideration. I look forward to discussing how I can contribute.<br /><br />Best regards,<br />Venkatasaikumar Erla</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+          <div style={card()}>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📄 RESUME PREVIEW</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#fff' }}>VENKATASAIKUMAR ERLA</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 12, fontSize: 11 }}>West Haven, CT | venkatasaikumarerla@gmail.com</div>
+              <div style={{ fontWeight: 600, marginBottom: 4, color: '#60A5FA' }}>SUMMARY</div>
+              <div style={{ marginBottom: 12 }}>MS Data Science candidate with 3.5 years full stack experience. Skilled in Python, ML, NLP, and LLM-based systems. Tailored for {job.title} at {job.org}.</div>
+              <div style={{ fontWeight: 600, marginBottom: 4, color: '#60A5FA' }}>KEY SKILLS</div>
+              <div>Python · TensorFlow · NLP · LangChain · AWS · SQL · Scikit-learn · FastAPI</div>
+            </div>
+            {tailored?.resume_path && (
+              <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                📁 {tailored.resume_path.split('\\').pop()}
+              </div>
+            )}
           </div>
-          <button style={{ marginTop: 12, width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>⬇️ Download Cover Letter</button>
-        </div>
-      </div>
 
-      {/* Decision */}
+          <div style={card()}>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📝 COVER LETTER</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200, overflowY: 'auto', maxHeight: 250 }}>
+              {tailored?.cover_text || `Dear Hiring Team at ${job.org},\n\nI am excited to apply for the ${job.title} position...`}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decision Buttons */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <button style={{ padding: '16px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: 12, color: '#FB7185', fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+        <button onClick={handleNo} disabled={loading}
+          style={{ padding: '16px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: 12, color: '#FB7185', fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(244,63,94,0.2)'}
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(244,63,94,0.1)'}>
           ❌ Skip This Job
         </button>
-        <button style={{ padding: '16px', background: 'linear-gradient(135deg,#2563EB,#06B6D4)', border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 0 20px rgba(37,99,235,0.3)' }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(37,99,235,0.5)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(37,99,235,0.3)'}>
-          ✅ Submit Application
+        <button onClick={handleYes} disabled={loading || generating}
+          style={{ padding: '16px', background: loading ? 'rgba(37,99,235,0.4)' : 'linear-gradient(135deg,#2563EB,#06B6D4)', border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: '0 0 20px rgba(37,99,235,0.3)' }}>
+          {loading ? '⏳ Submitting...' : '✅ Submit Application'}
         </button>
+      </div>
+
+      {/* Job counter */}
+      <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+        Job {step + 1} of {jobs.length}
       </div>
     </div>
   );
