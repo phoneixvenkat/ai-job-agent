@@ -108,8 +108,21 @@ def run_analyst(jobs: list, resume_text: str, decode_jds: bool = False) -> list:
     print(f"\n🧪 Analyst Agent analyzing {len(jobs)} jobs...\n")
     analyzed = []
     for i, job in enumerate(jobs, 1):
-        print(f"  Analyzing {i}/{len(jobs)}: {job['title']} — {job['org']}")
-        analyzed.append(analyze_job(job, resume_text, decode=decode_jds))
+        description = job.get("description", job.get("title", ""))
+        fit_score   = calculate_fit_score(resume_text, description)
+        missing     = get_missing_skills(resume_text, description)
+        ats         = calculate_ats_score(resume_text, description)
+        salary      = estimate_salary(job["title"], job.get("location", ""))
+
+        job["fit_score"]      = fit_score
+        job["missing_skills"] = missing
+        job["ats_score"]      = ats["score"]
+        job["salary"]         = salary
+        job["jd_decoded"]     = "Click to decode"
+        job["keywords"]       = missing[:6]
+
+        analyzed.append(job)
+
     analyzed.sort(key=lambda x: x["fit_score"], reverse=True)
-    print(f"\n✅ Analysis complete. Top fit: {analyzed[0]['fit_score']}%\n")
+    print(f"✅ Analysis complete. Top fit: {analyzed[0]['fit_score']}%\n")
     return analyzed

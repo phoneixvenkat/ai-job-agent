@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { Upload, CheckCircle, FileText } from 'lucide-react';
 
 const API = 'http://127.0.0.1:8000';
 
 export default function ResumeUpload() {
-  const [file, setFile]         = useState<File | null>(null);
-  const [status, setStatus]     = useState<'idle'|'uploading'|'done'|'error'>('idle');
-  const [message, setMessage]   = useState('');
+  const [file, setFile]       = useState<File | null>(null);
+  const [status, setStatus]   = useState<'idle'|'uploading'|'done'|'error'>('idle');
+  const [message, setMessage] = useState('');
   const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (f: File) => setFile(f);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -16,41 +18,55 @@ export default function ResumeUpload() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await axios.post(`${API}/api/resume/upload`, formData);
-      setMessage(`✅ Resume uploaded! ${res.data.text_length} characters extracted.`);
+      const res = await axios.post(`${API}/api/resume/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setMessage(`✅ Resume uploaded! ${res.data.length} characters extracted.`);
       setStatus('done');
-    } catch {
-      setMessage('❌ Upload failed. Please try again.');
+    } catch (e: any) {
+      setMessage(`❌ Upload failed: ${e.response?.data?.detail || e.message}`);
       setStatus('error');
     }
   };
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-2">Upload Resume</h1>
-      <p className="text-gray-400 mb-8">Upload your resume once — AI will tailor it for every job automatically.</p>
+    <div style={{ padding: 28, maxWidth: 700, margin: '0 auto', animation: 'fadeUp 0.5s ease' }}>
+      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Upload Resume 📄</div>
+      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
+        Upload your resume once — AI will tailor it for every job automatically
+      </div>
 
       {/* Drop Zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); setFile(e.dataTransfer.files[0]); }}
-        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all
-          ${dragging ? 'border-blue-400 bg-blue-900/20' : 'border-gray-600 hover:border-blue-500 hover:bg-gray-800/50'}`}
-        onClick={() => document.getElementById('fileInput')?.click()}
-      >
-        <input id="fileInput" type="file" accept=".pdf,.docx,.txt"
-               className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
-        <Upload size={48} className="mx-auto mb-4 text-blue-400" />
+        onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+        onClick={() => inputRef.current?.click()}
+        style={{
+          border: `2px dashed ${dragging ? '#2563EB' : 'rgba(255,255,255,0.12)'}`,
+          borderRadius: 16, padding: '48px 24px', textAlign: 'center', cursor: 'pointer',
+          background: dragging ? 'rgba(37,99,235,0.08)' : 'rgba(255,255,255,0.02)',
+          transition: 'all 0.2s', marginBottom: 20
+        }}>
+        <input ref={inputRef} type="file" accept=".pdf,.docx,.txt"
+          style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+        <div style={{ fontSize: 40, marginBottom: 12 }}>📁</div>
         {file ? (
           <div>
-            <p className="text-white font-semibold text-lg">{file.name}</p>
-            <p className="text-gray-400 text-sm mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#60A5FA' }}>{file.name}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+              {(file.size / 1024).toFixed(1)} KB — ready to upload
+            </div>
           </div>
         ) : (
           <div>
-            <p className="text-white font-medium">Drop your resume here or click to browse</p>
-            <p className="text-gray-400 text-sm mt-2">Supports PDF, DOCX, TXT</p>
+            <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>
+              Drop your resume here or click to browse
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
+              PDF, DOCX, or TXT supported
+            </div>
           </div>
         )}
       </div>
@@ -58,31 +74,51 @@ export default function ResumeUpload() {
       {/* Upload Button */}
       {file && status !== 'done' && (
         <button onClick={handleUpload} disabled={status === 'uploading'}
-          className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50">
+          style={{
+            width: '100%', padding: '14px', marginBottom: 16,
+            background: status === 'uploading' ? 'rgba(37,99,235,0.4)' : 'linear-gradient(135deg,#2563EB,#06B6D4)',
+            border: 'none', borderRadius: 12, color: '#fff', fontSize: 15,
+            fontWeight: 600, cursor: status === 'uploading' ? 'not-allowed' : 'pointer',
+            boxShadow: '0 0 20px rgba(37,99,235,0.3)'
+          }}>
           {status === 'uploading' ? '⏳ Uploading...' : '🚀 Upload Resume'}
         </button>
       )}
 
-      {/* Status Message */}
+      {/* Status */}
       {message && (
-        <div className={`mt-4 p-4 rounded-xl text-sm font-medium
-          ${status === 'done' ? 'bg-green-900 text-green-400 border border-green-700' :
-            'bg-red-900 text-red-400 border border-red-700'}`}>
+        <div style={{
+          padding: '14px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, marginBottom: 20,
+          background: status === 'done' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)',
+          border: `1px solid ${status === 'done' ? 'rgba(16,185,129,0.3)' : 'rgba(244,63,94,0.3)'}`,
+          color: status === 'done' ? '#6EE7B7' : '#FB7185'
+        }}>
           {message}
         </div>
       )}
 
+      {/* Re-upload button */}
+      {status === 'done' && (
+        <button onClick={() => { setFile(null); setStatus('idle'); setMessage(''); }}
+          style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer', marginBottom: 20 }}>
+          📎 Upload Different Resume
+        </button>
+      )}
+
       {/* Tips */}
-      <div className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          <FileText size={18} /> Tips for best results
-        </h2>
-        <ul className="space-y-2 text-gray-400 text-sm">
-          <li>✅ Use a PDF or DOCX format</li>
-          <li>✅ Make sure your skills section is clearly written</li>
-          <li>✅ Include your education and experience clearly</li>
-          <li>✅ The AI will match your skills to each job automatically</li>
-        </ul>
+      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12, color: 'rgba(255,255,255,0.8)' }}>
+          📌 Tips for best results
+        </div>
+        {[
+          '✅ Use PDF format for best text extraction',
+          '✅ Make sure your skills section is clearly listed',
+          '✅ Include all your projects with technologies used',
+          '✅ AI will match your skills to each job automatically',
+          '✅ Upload once — works across all job searches',
+        ].map(tip => (
+          <div key={tip} style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{tip}</div>
+        ))}
       </div>
     </div>
   );
