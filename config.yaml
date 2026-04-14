@@ -16,13 +16,9 @@ sources:
     - arcus-biosciences
 
   lever:
-    - scale-ai
-    - cohere
-    - weights-biases
-    - dataiku
-    - snorkel-ai
-    - dbtlabs
-    - activeloop
+    - plaid
+    - mistral
+    - anyscale
 
 filters:
   required:
