@@ -1,24 +1,65 @@
 projects:
-  clinical-trial-matcher:
-    tags: ["nlp","python","healthcare","pandas","regex","matching","transformers"]
-    title: "Clinical Trial Matcher (NLP)"
+  jobpilot_ai:
+    title: "JobPilot AI — Multi-Agent Job Application System"
+    tags: ["python", "langchain", "langgraph", "llm", "fastapi", "react", "mysql", "ai", "agent"]
     bullets:
-      - "Built NLP pipeline (spaCy + regex) to normalize trial criteria; improved match precision by 18%."
-      - "Parsed 5k+ trial records; engineered keyword/semantic features; exported ranked matches."
-  sparkify:
-    tags: ["pyspark","sql","ml","churn","eda","pipeline"]
-    title: "Sparkify Churn Prediction (PySpark)"
+      - "Built 6-agent LangGraph system automating job search, resume tailoring, and application submission across 6 platforms"
+      - "Implemented LLM-based job matching using Llama3 with TF-IDF hybrid scoring achieving 85%+ accuracy"
+      - "Designed MySQL database with adaptive pattern learning that improves recommendations from application outcomes"
+      - "Built React TypeScript dashboard with real-time agent status, animated UI, and application tracking"
+
+  agentic_dq:
+    title: "Agentic Data Quality Monitor"
+    tags: ["python", "langchain", "langgraph", "duckdb", "great expectations", "streamlit", "llm", "agent"]
     bullets:
-      - "Processed 12M events in PySpark; engineered session features; trained GBM/LogReg (+9% AUC)."
-      - "Productionized ETL & data quality checks; delivered churn cohort dashboards."
-  emg:
-    tags: ["signal","biomedical","python","numpy"]
-    title: "EMG Signal Analysis"
+      - "Designed multi-agent LangGraph system for automated data quality monitoring using Great Expectations"
+      - "Integrated DuckDB for high-performance in-memory analytics with LLM-generated quality reports"
+      - "Built Streamlit dashboard showing real-time data quality metrics and anomaly detection alerts"
+
+  cybermoe_ids:
+    title: "CyberMoE-IDS — LLM-based Intrusion Detection System"
+    tags: ["python", "llm", "bert", "mistral", "llama", "cybersecurity", "machine learning", "nlp"]
     bullets:
-      - "Filtered EMG (band-pass/notch); extracted RMS/MAV/ZCR for gesture classification."
-      - "Automated visualization & reports; improved feature stability across sessions by 11%."
+      - "Architected Mixture of Experts IDS combining SecureBERT, Mistral 7B, and LLaMA2 for network threat detection"
+      - "Published systematic review of 25+ AI-based IDS papers at 2025 TRON Symposium"
+      - "Achieved 94%+ detection accuracy on benchmark IoT datasets using ensemble LLM approach"
+
+  plant_health:
+    title: "Plant Health Monitoring — Mask R-CNN"
+    tags: ["python", "pytorch", "deep learning", "computer vision", "cnn", "object detection", "colab"]
+    bullets:
+      - "Implemented Mask R-CNN with ResNet50 FPN backbone for plant disease detection across 9 classes"
+      - "Processed COCO-format annotations achieving 78% mAP on plant disease classification"
+      - "Deployed model pipeline in Google Colab with automated data augmentation and training loops"
+
+  aws_pipeline:
+    title: "AWS Data Engineering Pipeline — CDC Health Data"
+    tags: ["aws", "s3", "glue", "emr", "athena", "spark", "python", "data engineering", "sql"]
+    bullets:
+      - "Built end-to-end AWS data pipeline processing CDC PLACES health data using S3, Glue, and EMR"
+      - "Implemented Spark transformations on EMR cluster reducing processing time by 60%"
+      - "Created Athena queries for ad-hoc analysis with automated Glue crawlers for schema detection"
+
+  rag_pipeline:
+    title: "RAG Pipeline — Document Q&A System"
+    tags: ["python", "rag", "faiss", "sentence-transformers", "groq", "llm", "nlp", "langchain"]
+    bullets:
+      - "Built RAG pipeline using sentence-transformers and FAISS vector store for semantic document search"
+      - "Integrated Groq free API as LLM backend achieving sub-second response times"
+      - "Implemented chunking strategies and retrieval optimization improving answer accuracy by 40%"
+
+  rl_taxi:
+    title: "Self-Driving Taxi — Reinforcement Learning"
+    tags: ["python", "reinforcement learning", "q-learning", "machine learning", "gym"]
+    bullets:
+      - "Compared Policy Iteration, Value Iteration, and Q-Learning algorithms on OpenAI Gym taxi environment"
+      - "Value Iteration achieved fastest convergence at 847 iterations with 100% success rate"
+      - "Implemented epsilon-greedy exploration strategy with dynamic learning rate scheduling"
+
 general_bullets:
-  - text: "Wrote modular Python with type hints & tests; reduced pipeline bugs."
-    tags: ["python","testing","pipeline"]
-  - text: "Built SQL joins/window functions; cut report runtime by 35%."
-    tags: ["sql","analytics"]
+  - text: "Led cross-functional team delivering ML solutions 20% ahead of schedule"
+    tags: ["leadership", "team", "project management"]
+  - text: "Reduced model inference time by 45% through optimization and caching strategies"
+    tags: ["optimization", "performance", "mlops"]
+  - text: "Mentored junior developers in Python best practices and ML workflows"
+    tags: ["mentoring", "python", "teaching"]
