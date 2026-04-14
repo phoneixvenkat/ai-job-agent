@@ -1,142 +1,227 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 import pdfplumber
 import io
-import os
+import pathlib
+import yaml
 
-# Internal Imports
-from database import init_db, get_db, Job, Application
-from job_scraper import search_jobs
-from fit_scorer import calculate_fit_score, get_matching_keywords
-from resume_tailor import tailor_resume, generate_cover_letter
+from database.mysql_db import (
+    init_database, log_application, get_all_applications,
+    update_application_status, get_stats, check_duplicate, save_job
+)
+from agents.scout_agent import run_scout
+from agents.analyst_agent import run_analyst
+from agents.duplicate_agent import run_duplicate_agents
+from agents.writer_agent import run_writer
+from agents.rejection_agent import handle_rejection, handle_acceptance, handle_offer
+from intelligence.adaptive_pattern import get_recommendations
 
-app = FastAPI(title="AI Job Agent API")
-
-# 1. FIXED CORS: Added both localhost and 127.0.0.1 to prevent connection refusal
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+app = FastAPI(title="JobPilot AI API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize DB on startup
-@app.on_event("startup")
-def startup_event():
-    init_db()
-
-# Global state (Note: In a real app, save this to a DB or File System)
+ROOT         = pathlib.Path(__file__).parent.parent
 resume_store = {"text": "", "filename": ""}
 
-# --- Pydantic Schemas for Validation ---
-class SearchRequest(BaseModel):
-    role: str
-    location: Optional[str] = "Remote"
-    limit: Optional[int] = 20
+init_database()
 
-class TailorRequest(BaseModel):
-    job_id: int
-
-# --- API Endpoints ---
-
-@app.get("/")
-async def root():
-    return {"message": "AI Job Agent API is running. Visit /docs for documentation."}
-
-@app.post("/api/resume/upload", status_code=status.HTTP_201_CREATED)
+# ── Resume Upload ──────────────────────────────────────
+@app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):
+    content = await file.read()
+    text    = ""
     try:
-        content = await file.read()
-        text = ""
-        
         if file.filename.endswith(".pdf"):
             with pdfplumber.open(io.BytesIO(content)) as pdf:
-                text = "".join([page.extract_text() or "" for page in pdf.pages])
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
         elif file.filename.endswith(".docx"):
             import docx
-            doc = docx.Document(io.BytesIO(content))
+            doc  = docx.Document(io.BytesIO(content))
             text = "\n".join([p.text for p in doc.paragraphs])
         else:
-            text = content.decode("utf-8")
-
-        if not text.strip():
-            raise HTTPException(status_code=400, detail="Could not extract text from file.")
-
-        resume_store["text"] = text
-        resume_store["filename"] = file.filename
-        
-        return {
-            "message": "Resume uploaded successfully", 
-            "filename": file.filename, 
-            "text_length": len(text)
-        }
+            text = content.decode("utf-8", errors="ignore")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Could not read file: {str(e)}")
 
-@app.post("/api/jobs/search")
-async def search(req: SearchRequest, db: Session = Depends(get_db)):
-    if not resume_store["text"]:
-        raise HTTPException(status_code=400, detail="Please upload your resume first")
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from file")
 
-    # This might be a long-running task, async is better
-    jobs = search_jobs(req.role, req.location, req.limit)
-    saved = []
+    resume_store["text"]     = text
+    resume_store["filename"] = file.filename
 
-    for j in jobs:
-        fit_score = calculate_fit_score(resume_store["text"], j["description"])
-        keywords = get_matching_keywords(resume_store["text"], j["description"])
-        
-        db_job = Job(
-            title=j["title"], 
-            company=j["company"], 
-            location=j["location"],
-            description=j["description"], 
-            url=j["url"], 
-            source=j["source"],
-            fit_score=fit_score
-        )
-        db.add(db_job)
-        db.commit()
-        db.refresh(db_job)
-        
-        saved.append({
-            "id": db_job.id,
-            "title": db_job.title,
-            "company": db_job.company,
-            "fit_score": db_job.fit_score,
-            "keywords": keywords,
-            "url": db_job.url
-        })
-
-    return {"jobs": sorted(saved, key=lambda x: x["fit_score"], reverse=True)}
-
-@app.get("/api/jobs")
-async def get_jobs(db: Session = Depends(get_db)):
-    jobs = db.query(Job).order_by(Job.fit_score.desc()).all()
-    return {"jobs": jobs}
-
-@app.get("/api/stats")
-async def get_stats(db: Session = Depends(get_db)):
-    jobs = db.query(Job).all()
-    apps = db.query(Application).count()
-    
-    avg_score = round(sum(j.fit_score for j in jobs) / len(jobs), 1) if jobs else 0
-    high_fit = len([j for j in jobs if j.fit_score >= 60])
-    
     return {
-        "total_jobs": len(jobs), 
-        "applied": apps, 
-        "avg_fit_score": avg_score, 
-        "high_fit_jobs": high_fit
+        "message":  "Resume uploaded successfully",
+        "filename": file.filename,
+        "length":   len(text),
+        "preview":  text[:200]
     }
 
-# ... (Keep tailor and apply_job routes, ensuring they use async def)
+# ── Job Search ─────────────────────────────────────────
+class SearchRequest(BaseModel):
+    roles:    list
+    location: Optional[str] = "Remote"
+    limit:    Optional[int] = 20
+    use_llm:  Optional[bool] = False
+
+@app.post("/api/jobs/search")
+def search_jobs(req: SearchRequest):
+    if not resume_store["text"]:
+        raise HTTPException(status_code=400, detail="Upload your resume first")
+
+    cfg    = yaml.safe_load(open(ROOT/"config.yaml","r",encoding="utf-8"))
+    result = run_scout(cfg, req.roles, req.location)
+    jobs   = result["jobs"]
+
+    # Run duplicate agents
+    dup_result = run_duplicate_agents(jobs)
+    clean_jobs = dup_result["clean_jobs"]
+
+    # Run analyst
+    analyzed = run_analyst(clean_jobs, resume_store["text"])
+
+    # Fast scoring — no LLM unless requested
+    for job in analyzed:
+        score = job.get("fit_score", 0)
+        if score >= 70:
+            job["recommendation"] = "APPLY"
+            job["explanation"]    = f"Strong match at {score}% — your skills align well."
+        elif score >= 40:
+            job["recommendation"] = "CONSIDER"
+            job["explanation"]    = f"Moderate match at {score}% — worth considering."
+        else:
+            job["recommendation"] = "SKIP"
+            job["explanation"]    = f"Low match at {score}% — skill gaps detected."
+        job["combined_score"] = score
+        job["should_apply"]   = score >= 40
+
+    # Optionally run LLM matcher
+    if req.use_llm:
+        from agents.llm_matcher import batch_match
+        analyzed = batch_match(resume_store["text"], analyzed[:10])
+
+    return {
+        "jobs":               analyzed,
+        "total":              result["total"],
+        "matched":            result["matched"],
+        "duplicates_removed": dup_result["total_removed"],
+        "clean_count":        dup_result["clean_count"]
+    }
+
+# ── Get All Jobs ───────────────────────────────────────
+@app.get("/api/jobs")
+def get_jobs():
+    return {"jobs": []}
+
+# ── Tailor Resume ──────────────────────────────────────
+class TailorRequest(BaseModel):
+    job:     dict
+    use_llm: Optional[bool] = False
+
+@app.post("/api/resume/tailor")
+def tailor_resume(req: TailorRequest):
+    if not resume_store["text"]:
+        raise HTTPException(status_code=400, detail="Upload resume first")
+    result = run_writer(req.job, resume_store["text"], use_llm=req.use_llm)
+    return {
+        "resume_path":  result["resume_path"],
+        "cover_path":   result["cover_path"],
+        "cover_text":   result["cover_text"],
+        "summary_used": result["summary_used"]
+    }
+
+# ── Apply to Job ───────────────────────────────────────
+class ApplyRequest(BaseModel):
+    job:         dict
+    resume_path: str
+    cover_path:  str
+    status:      Optional[str] = "applied"
+    explanation: Optional[str] = ""
+
+@app.post("/api/jobs/apply")
+def apply_job(req: ApplyRequest):
+    app_id = log_application(
+        req.job, req.resume_path, req.cover_path,
+        req.status, req.explanation
+    )
+    return {"message": "Application logged", "app_id": app_id}
+
+# ── Skip Job ───────────────────────────────────────────
+class SkipRequest(BaseModel):
+    job:    dict
+    reason: Optional[str] = "User skipped"
+
+@app.post("/api/jobs/skip")
+def skip_job(req: SkipRequest):
+    app_id = log_application(req.job, "", "", "skipped", req.reason)
+    return {"message": "Job skipped", "app_id": app_id}
+
+# ── Get Applications ───────────────────────────────────
+@app.get("/api/applications")
+def get_applications():
+    apps = get_all_applications()
+    return {"applications": apps}
+
+# ── Update Status ──────────────────────────────────────
+class StatusUpdate(BaseModel):
+    status: str
+
+@app.patch("/api/applications/{app_id}")
+def update_status(app_id: int, update: StatusUpdate):
+    update_application_status(app_id, update.status)
+    return {"message": "Status updated"}
+
+# ── Rejection / Acceptance ─────────────────────────────
+class OutcomeRequest(BaseModel):
+    app_id: int
+    job:    dict
+
+@app.post("/api/applications/rejected")
+def rejected(req: OutcomeRequest):
+    return handle_rejection(req.app_id, req.job, resume_store["text"])
+
+@app.post("/api/applications/accepted")
+def accepted(req: OutcomeRequest):
+    return handle_acceptance(req.app_id, req.job)
+
+@app.post("/api/applications/offer")
+def offer(req: OutcomeRequest):
+    return handle_offer(req.app_id, req.job)
+
+# ── Stats ──────────────────────────────────────────────
+@app.get("/api/stats")
+def stats():
+    s    = get_stats()
+    recs = get_recommendations()
+    return {**s, "recommendations": recs}
+
+# ── Email Agent ────────────────────────────────────────
+class EmailRequest(BaseModel):
+    email_addr: str
+    password:   str
+    provider:   Optional[str] = "gmail"
+
+@app.post("/api/email/scan")
+def scan_emails(req: EmailRequest):
+    from agents.email_agent import run_email_agent
+    results = run_email_agent(req.email_addr, req.password, req.provider)
+    return {"results": results, "count": len(results)}
+
+# ── Excel Report ───────────────────────────────────────
+@app.get("/api/report/excel")
+def excel_report():
+    from agents.tracker_agent import generate_excel_report
+    path = generate_excel_report()
+    return {"path": path, "message": "Report generated"}
+
+# ── Adaptive Patterns ──────────────────────────────────
+@app.get("/api/patterns")
+def patterns():
+    return get_recommendations()
