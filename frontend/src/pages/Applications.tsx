@@ -12,35 +12,73 @@ const statusStyle: any = {
 };
 
 export default function Applications() {
-  const [apps, setApps]   = useState<any[]>([]);
-  const [filter, setFilter] = useState('all');
+  const [apps, setApps]       = useState<any[]>([]);
+  const [filter, setFilter]   = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats]     = useState({ total: 0, applied: 0, interview: 0, offer: 0, rejected: 0 });
 
-  useEffect(() => {
-    axios.get(`${API}/api/applications`).then(r => setApps(r.data.applications || [])).catch(() => {
-      setApps([
-        { id:1, title:'Data Scientist', org:'Natera', source:'Greenhouse', fit_score:87, status:'applied', applied_at:'2026-04-05 10:32', followup_date:'2026-04-12' },
-        { id:2, title:'ML Engineer', org:'Truveta', source:'Greenhouse', fit_score:79, status:'interview', applied_at:'2026-04-03 09:15', followup_date:'2026-04-10' },
-        { id:3, title:'AI Engineer', org:'Oscar', source:'LinkedIn', fit_score:65, status:'skipped', applied_at:'2026-04-02 14:20', followup_date:'' },
-      ]);
-    });
-  }, []);
+  useEffect(() => { fetchApps(); }, []);
+
+  const fetchApps = async () => {
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/api/applications`);
+      const data = r.data.applications || [];
+      setApps(data);
+      setStats({
+        total:     data.length,
+        applied:   data.filter((a: any) => a.status === 'applied').length,
+        interview: data.filter((a: any) => a.status === 'interview').length,
+        offer:     data.filter((a: any) => a.status === 'offer').length,
+        rejected:  data.filter((a: any) => a.status === 'rejected').length,
+      });
+    } catch (e) { setApps([]); }
+    setLoading(false);
+  };
 
   const filtered = filter === 'all' ? apps : apps.filter(a => a.status === filter);
-  const counts   = { all: apps.length, applied: apps.filter(a=>a.status==='applied').length, interview: apps.filter(a=>a.status==='interview').length, offer: apps.filter(a=>a.status==='offer').length };
 
   const updateStatus = async (id: number, status: string) => {
     await axios.patch(`${API}/api/applications/${id}`, { status }).catch(() => {});
     setApps(apps.map(a => a.id === id ? { ...a, status } : a));
   };
 
+  const handleOutcome = async (app: any, outcome: string) => {
+    try {
+      await axios.post(`${API}/api/applications/${outcome}`, { app_id: app.id, job: app });
+      fetchApps();
+    } catch (e) {}
+  };
+
+  const getDaysAgo = (dateStr: string) => {
+    if (!dateStr) return 0;
+    const diff = new Date().getTime() - new Date(dateStr).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  };
+
   return (
     <div style={{ padding: 28, animation: 'fadeUp 0.5s ease' }}>
-      <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Applications 📋</div>
-      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 24 }}>Track every application — update status, follow-ups, and more</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 600 }}>Applications 📋</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>Track every application in real time</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={fetchApps} style={{ padding: '8px 16px', background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: 10, color: '#60A5FA', fontSize: 12, cursor: 'pointer' }}>
+            🔄 Refresh
+          </button>
+          <button onClick={async () => {
+            const r = await axios.get(`${API}/api/report/excel`).catch(() => null);
+            if (r) alert(`Excel report generated: ${r.data.path}`);
+          }} style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, color: '#6EE7B7', fontSize: 12, cursor: 'pointer' }}>
+            📥 Excel Report
+          </button>
+        </div>
+      </div>
 
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
-        {[['Total',counts.all,'#2563EB'],['Applied',counts.applied,'#10B981'],['Interview',counts.interview,'#F59E0B'],['Offers',counts.offer,'#06B6D4']].map(([label,val,color]) => (
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 24 }}>
+        {[['Total', stats.total, '#fff'], ['Applied', stats.applied, '#60A5FA'], ['Interview', stats.interview, '#FCD34D'], ['Offers', stats.offer, '#6EE7B7'], ['Rejected', stats.rejected, '#FB7185']].map(([label, val, color]) => (
           <div key={label as string} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>{label as string}</div>
             <div style={{ fontSize: 24, fontWeight: 600, color: color as string }}>{val as number}</div>
@@ -49,38 +87,59 @@ export default function Applications() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {['all','applied','interview','offer','rejected','skipped'].map(f => (
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {['all', 'applied', 'interview', 'offer', 'rejected', 'skipped'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: 'none', background: filter === f ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.05)', color: filter === f ? '#60A5FA' : 'rgba(255,255,255,0.45)', textTransform: 'capitalize' }}>
-            {f}
+            {f} {f !== 'all' ? `(${apps.filter(a => a.status === f).length})` : `(${apps.length})`}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.8fr 0.6fr 0.8fr 1fr 1.2fr', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          <div>Job</div><div>Company</div><div>Fit</div><div>Source</div><div>Applied</div><div>Follow-up</div><div>Status</div>
+      {/* Loading */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.4)' }}>
+          ⏳ Loading applications...
         </div>
-        {filtered.map((app, i) => {
-          const st = statusStyle[app.status] || statusStyle.applied;
-          return (
-            <div key={app.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.8fr 0.6fr 0.8fr 1fr 1.2fr', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)', alignItems: 'center', fontSize: 13 }}>
-              <div style={{ fontWeight: 500 }}>{app.title}</div>
-              <div style={{ color: 'rgba(255,255,255,0.55)' }}>{app.org}</div>
-              <div style={{ color: app.fit_score >= 70 ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{app.fit_score}%</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{app.source}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{String(app.applied_at || '').slice(0,10)}</div>
-              <div style={{ fontSize: 11, color: app.followup_date ? '#FCD34D' : 'rgba(255,255,255,0.3)' }}>{app.followup_date || '—'}</div>
-              <select value={app.status} onChange={e => updateStatus(app.id, e.target.value)}
-                style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, border: 'none', cursor: 'pointer', outline: 'none' }}>
-                {['applied','interview','offer','rejected','skipped'].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          );
-        })}
-      </div>
+      )}
+
+      {/* Empty */}
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>No applications yet</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>Go to Job Hunt and apply to some jobs!</div>
+        </div>
+      )}
+
+      {/* Table */}
+      {!loading && filtered.length > 0 && (
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 0.7fr 0.7fr 0.8fr 0.8fr 1.2fr', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div>Job</div><div>Company</div><div>Fit</div><div>Days</div><div>Follow-up</div><div>Source</div><div>Status</div>
+          </div>
+          {filtered.map((app, i) => {
+            const st      = statusStyle[app.status] || statusStyle.applied;
+            const daysAgo = getDaysAgo(app.applied_at);
+            return (
+              <div key={app.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 0.7fr 0.7fr 0.8fr 0.8fr 1.2fr', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)', alignItems: 'center', fontSize: 13 }}>
+                <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.title}</div>
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12 }}>{app.org}</div>
+                <div style={{ color: Number(app.fit_score) >= 70 ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{Number(app.fit_score || 0).toFixed(1)}%</div>
+                <div style={{ fontSize: 12, color: daysAgo > 7 ? '#FCD34D' : 'rgba(255,255,255,0.4)' }}>{daysAgo}d</div>
+                <div style={{ fontSize: 11, color: app.followup_date ? '#FCD34D' : 'rgba(255,255,255,0.3)' }}>
+                  {app.followup_date ? String(app.followup_date).slice(0, 10) : '—'}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{app.source}</div>
+                <select value={app.status} onChange={e => updateStatus(app.id, e.target.value)}
+                  style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, border: 'none', cursor: 'pointer', outline: 'none' }}>
+                  {['applied', 'interview', 'offer', 'rejected', 'skipped'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
