@@ -28,6 +28,7 @@ export default function Review() {
 
   useEffect(() => {
     if (job) generateDocs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   const generateDocs = async () => {
