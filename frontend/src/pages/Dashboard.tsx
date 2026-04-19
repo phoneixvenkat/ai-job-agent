@@ -14,6 +14,7 @@ export default function Dashboard() {
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStats = async () => {
