@@ -43,6 +43,7 @@ export default function Applications() {
     setApps(apps.map(a => a.id === id ? { ...a, status } : a));
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleOutcome = async (app: any, outcome: string) => {
     try {
       await axios.post(`${API}/api/applications/${outcome}`, { app_id: app.id, job: app });
