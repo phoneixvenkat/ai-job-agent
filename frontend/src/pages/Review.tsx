@@ -37,7 +37,7 @@ export default function Review() {
     setTailored(null);
     try {
       const r = await axios.post(`${API}/api/resume/tailor`, { job, use_llm: false });
-      setTailored(r.data);
+      setTailored(r.data.data || r.data);
     } catch (e) {
       setTailored({ cover_text: 'Could not generate — upload resume first', resume_path: '', cover_path: '' });
     }

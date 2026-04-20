@@ -17,8 +17,8 @@ export default function Analytics() {
       axios.get(`${API}/api/stats`),
       axios.get(`${API}/api/applications`)
     ]).then(([s, a]) => {
-      setStats(s.data);
-      setApps(a.data.applications || []);
+      setStats(s.data.data || {});
+      setApps((a.data.data || {}).applications || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 

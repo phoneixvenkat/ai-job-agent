@@ -1,9 +1,15 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
+_llm = None
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+    return _llm
+
 
 def tailor_resume(resume_text: str, job_title: str, job_description: str, company: str) -> str:
+    from langchain_core.messages import HumanMessage
     prompt = f"""You are an expert resume writer. Rewrite the following resume to better match the job description.
 
 Job Title: {job_title}
@@ -20,11 +26,12 @@ Instructions:
 - Keep it under 400 words
 - Return only the rewritten resume text, no extra commentary"""
 
-    response = llm.invoke([HumanMessage(content=prompt)])
+    response = _get_llm().invoke([HumanMessage(content=prompt)])
     return response.content.strip()
 
 
 def generate_cover_letter(resume_text: str, job_title: str, job_description: str, company: str) -> str:
+    from langchain_core.messages import HumanMessage
     prompt = f"""Write a professional cover letter for this job application.
 
 Job Title: {job_title}
@@ -41,5 +48,5 @@ Instructions:
 - End with a call to action
 - Return only the cover letter text"""
 
-    response = llm.invoke([HumanMessage(content=prompt)])
+    response = _get_llm().invoke([HumanMessage(content=prompt)])
     return response.content.strip()

@@ -1,11 +1,17 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
 from fpdf import FPDF
 import pathlib
 import datetime
 
-llm  = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
 ROOT = pathlib.Path(__file__).parent.parent
+
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+    return _llm
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
 
@@ -26,9 +32,10 @@ Generate:
 Be specific and actionable."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         content  = response.content.strip()
-    except:
+    except Exception:
         content = f"""## TECHNICAL QUESTIONS
 1. Describe your experience with machine learning pipelines.
 2. How have you used Python for data analysis?

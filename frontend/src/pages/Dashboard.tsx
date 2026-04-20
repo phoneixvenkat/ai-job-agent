@@ -19,10 +19,11 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const r = await axios.get(`${API}/api/stats`);
-      setStats(r.data);
-      setRecs(r.data.recommendations || { insights: [] });
-      animateCounters(r.data);
+      const r    = await axios.get(`${API}/api/stats`);
+      const data = r.data.data || {};
+      setStats(data);
+      setRecs(data.recommendations || { insights: [] });
+      animateCounters(data);
     } catch (e) {
       animateCounters({ applied: 0, interview: 0, avg_fit: 0 });
     }
@@ -51,25 +52,25 @@ export default function Dashboard() {
   };
 
   const urgentJobs = [
-    { title: 'Data Scientist',  org: 'Natera',      salary: '$95-120k', tag: 'Today 🔥',  tagColor: '#FB7185', tagBg: 'rgba(244,63,94,0.15)'   },
-    { title: 'ML Engineer',     org: 'Truveta',     salary: '$85-110k', tag: '3 days',    tagColor: '#FCD34D', tagBg: 'rgba(245,158,11,0.15)'  },
-    { title: 'AI Engineer',     org: 'Mistral',     salary: '$110-150k',tag: '5 days',    tagColor: '#6EE7B7', tagBg: 'rgba(16,185,129,0.15)'  },
-    { title: 'Research Sci.',   org: 'Komodo Health',salary:'$90-120k', tag: '7 days',    tagColor: '#6EE7B7', tagBg: 'rgba(16,185,129,0.15)'  },
+    { title: 'Data Scientist',  org: 'Natera',       salary: '$95-120k',  tag: 'Today 🔥', tagColor: '#FB7185', tagBg: 'rgba(244,63,94,0.15)'  },
+    { title: 'ML Engineer',     org: 'Truveta',      salary: '$85-110k',  tag: '3 days',   tagColor: '#FCD34D', tagBg: 'rgba(245,158,11,0.15)' },
+    { title: 'AI Engineer',     org: 'Mistral',      salary: '$110-150k', tag: '5 days',   tagColor: '#6EE7B7', tagBg: 'rgba(16,185,129,0.15)' },
+    { title: 'Research Sci.',   org: 'Komodo Health', salary: '$90-120k', tag: '7 days',   tagColor: '#6EE7B7', tagBg: 'rgba(16,185,129,0.15)' },
   ];
 
   const fitData = [
-    { label: 'Data Scientist',  pct: 87, color: '#10B981' },
-    { label: 'ML Engineer',     pct: 79, color: '#2563EB' },
-    { label: 'AI Engineer',     pct: 72, color: '#2563EB' },
-    { label: 'Data Analyst',    pct: 61, color: '#F59E0B' },
-    { label: 'NLP Engineer',    pct: 58, color: '#F59E0B' },
+    { label: 'Data Scientist', pct: 87, color: '#10B981' },
+    { label: 'ML Engineer',    pct: 79, color: '#2563EB' },
+    { label: 'AI Engineer',    pct: 72, color: '#2563EB' },
+    { label: 'Data Analyst',   pct: 61, color: '#F59E0B' },
+    { label: 'NLP Engineer',   pct: 58, color: '#F59E0B' },
   ];
 
   const metrics = [
-    { label: 'Total Applied',  value: counts.applied,            suffix: '',  accent: '#2563EB' },
-    { label: 'Response Rate',  value: counts.response,           suffix: '%', accent: '#06B6D4' },
-    { label: 'Interviews',     value: counts.interview,          suffix: '',  accent: '#10B981' },
-    { label: 'Goal Progress',  value: counts.goal,               suffix: '%', accent: '#F59E0B' },
+    { label: 'Total Applied',  value: counts.applied,   suffix: '',  accent: '#2563EB' },
+    { label: 'Response Rate',  value: counts.response,  suffix: '%', accent: '#06B6D4' },
+    { label: 'Interviews',     value: counts.interview, suffix: '',  accent: '#10B981' },
+    { label: 'Goal Progress',  value: counts.goal,      suffix: '%', accent: '#F59E0B' },
   ];
 
   return (
@@ -167,11 +168,11 @@ export default function Dashboard() {
         <div style={card()}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>📚 Skill Gaps</div>
           {[
-            ['MLflow',   '82%', 'Missing', 'rgba(244,63,94,0.12)',  '#FB7185'],
-            ['Docker',   '78%', 'Missing', 'rgba(244,63,94,0.12)',  '#FB7185'],
-            ['PySpark',  '71%', 'Learning','rgba(245,158,11,0.12)', '#FCD34D'],
-            ['dbt',      '45%', 'Learning','rgba(245,158,11,0.12)', '#FCD34D'],
-            ['FastAPI',  '38%', 'Have it', 'rgba(16,185,129,0.12)', '#6EE7B7'],
+            ['MLflow',  '82%', 'Missing', 'rgba(244,63,94,0.12)',  '#FB7185'],
+            ['Docker',  '78%', 'Missing', 'rgba(244,63,94,0.12)',  '#FB7185'],
+            ['PySpark', '71%', 'Learning','rgba(245,158,11,0.12)', '#FCD34D'],
+            ['dbt',     '45%', 'Learning','rgba(245,158,11,0.12)', '#FCD34D'],
+            ['FastAPI', '38%', 'Have it', 'rgba(16,185,129,0.12)', '#6EE7B7'],
           ].map(([skill, freq, tag, bg, color]) => (
             <div key={skill as string} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div>
@@ -187,11 +188,11 @@ export default function Dashboard() {
         <div style={card()}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>🏆 Insights</div>
           {[
-            ['Total jobs found',   '258'],
-            ['Platforms active',   '4'],
-            ['Avg fit score',      `${stats.avg_fit || 0}%`],
-            ['Applications',       `${stats.applied || 0}`],
-            ['Interviews',         `${stats.interview || 0}`],
+            ['Total jobs found', '258'],
+            ['Platforms active', '4'],
+            ['Avg fit score',    `${stats.avg_fit || 0}%`],
+            ['Applications',    `${stats.applied || 0}`],
+            ['Interviews',      `${stats.interview || 0}`],
           ].map(([label, value]) => (
             <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 12 }}>
               <span style={{ color: 'rgba(255,255,255,0.35)' }}>{label as string}</span>

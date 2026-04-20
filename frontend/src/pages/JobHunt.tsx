@@ -19,7 +19,7 @@ export default function JobHunt() {
       const r = await axios.post(`${API}/api/jobs/search`, {
         roles: [role], location, limit: 20, use_llm: useLLM
       });
-      setJobs(r.data.jobs || []);
+      setJobs((r.data.data || {}).jobs || []);
     } catch (e: any) {
       setError(e.response?.data?.detail || 'Upload your resume first!');
     }

@@ -7,6 +7,7 @@ __pycache__/
 # Generated outputs & logs
 out/
 artifacts/
+reports/
 *.log
 
 # Playwright caches/binaries

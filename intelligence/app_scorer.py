@@ -1,7 +1,11 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
+_llm = None
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+    return _llm
 
 def explain_application_score(job: dict, resume_text: str) -> dict:
     fit_score = job.get("fit_score", 0)
@@ -33,9 +37,10 @@ Explain WHY the score is {combined}% and whether they should apply.
 Return only the explanation, no headers."""
 
     try:
-        response    = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response    = _get_llm().invoke([HumanMessage(content=prompt)])
         explanation = response.content.strip()
-    except:
+    except Exception:
         explanation = f"Combined score of {combined}% based on skill matching and job requirements analysis."
 
     return {

@@ -15,7 +15,7 @@ def calculate_fit_score(resume_text: str, job_description: str) -> float:
         matrix       = vectorizer.fit_transform([resume_clean, jd_clean])
         score        = cosine_similarity(matrix[0:1], matrix[1:2])[0][0]
         return round(float(score) * 100, 1)
-    except:
+    except Exception:
         return 0.0
 
 def get_matching_keywords(resume_text: str, job_description: str) -> list:
@@ -25,5 +25,5 @@ def get_matching_keywords(resume_text: str, job_description: str) -> list:
         stopwords    = {"the","and","for","with","you","are","that","this","have","will","from","our","your","we","be","to","of","in","a","an","is","it","as","at","by","or","on","not","but","was","has","had","do","can","would","should","could","may","might","must"}
         matches      = (resume_words & jd_words) - stopwords
         return sorted([w for w in matches if len(w) > 3])[:15]
-    except:
+    except Exception:
         return []

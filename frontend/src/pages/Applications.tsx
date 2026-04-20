@@ -23,7 +23,7 @@ export default function Applications() {
     setLoading(true);
     try {
       const r = await axios.get(`${API}/api/applications`);
-      const data = r.data.applications || [];
+      const data = (r.data.data || {}).applications || [];
       setApps(data);
       setStats({
         total:     data.length,
@@ -70,7 +70,7 @@ export default function Applications() {
           </button>
           <button onClick={async () => {
             const r = await axios.get(`${API}/api/report/excel`).catch(() => null);
-            if (r) alert(`Excel report generated: ${r.data.path}`);
+            if (r) alert(`Excel report generated: ${(r.data.data || {}).path}`);
           }} style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, color: '#6EE7B7', fontSize: 12, cursor: 'pointer' }}>
             📥 Excel Report
           </button>

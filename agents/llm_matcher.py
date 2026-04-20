@@ -1,9 +1,14 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
 import json
 import re
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+    return _llm
 
 def llm_match_job(resume_text: str, job: dict) -> dict:
     title       = job.get("title", "")
@@ -34,7 +39,8 @@ Provide your analysis in this EXACT JSON format:
 Return ONLY the JSON, no other text."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         text     = response.content.strip()
         text     = re.sub(r'```json|```', '', text).strip()
         result   = json.loads(text)

@@ -1,10 +1,15 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
 from database.mysql_db import get_connection
 from mysql.connector import Error
 import datetime
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+    return _llm
 
 def get_pending_followups() -> list:
     conn = get_connection()
@@ -48,7 +53,8 @@ BODY:
 <body>"""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         text     = response.content.strip()
         lines    = text.split('\n')
         subject  = ""

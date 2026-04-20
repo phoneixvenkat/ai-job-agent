@@ -3,8 +3,6 @@ import time
 import pathlib
 import yaml
 from docx import Document
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -12,7 +10,14 @@ ROOT = pathlib.Path(__file__).parent.parent
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+    return _llm
 
 def load_yaml(path): 
     return yaml.safe_load(open(path, "r", encoding="utf-8"))
@@ -28,7 +33,7 @@ def pick_bullets(jd_text: str, bank: dict, max_projects=3, bullets_per=2) -> tup
         import nltk
         nltk.download("punkt", quiet=True)
         nltk.download("punkt_tab", quiet=True)
-    except: pass
+    except Exception: pass
 
     stop     = set(w.strip().lower() for w in open(ROOT/"data"/"stopwords.txt","r",encoding="utf-8"))
     toks     = [re.sub(r"[^a-z0-9\+\-#]","", w.lower()) for w in wordpunct_tokenize(jd_text)]
@@ -52,6 +57,7 @@ def pick_bullets(jd_text: str, bank: dict, max_projects=3, bullets_per=2) -> tup
     return chosen, general[:2], jd_toks
 
 def rewrite_summary_llm(base_summary: str, job_title: str, jd_text: str) -> str:
+    from langchain_core.messages import HumanMessage
     prompt = f"""Rewrite this professional summary to better match the job.
 Keep all facts accurate. Maximum 3 sentences. Sound human and natural.
 
@@ -61,12 +67,13 @@ Original Summary: {base_summary}
 
 Return only the rewritten summary, nothing else."""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         return response.content.strip()
-    except:
+    except Exception:
         return base_summary
 
 def generate_cover_letter_llm(base: dict, job: dict, jd_text: str) -> str:
+    from langchain_core.messages import HumanMessage
     prompt = f"""Write a professional, personalized cover letter for this job application.
 
 Candidate: {base['name']}
@@ -84,9 +91,9 @@ Instructions:
 - Do NOT use placeholders like [Your Name]
 - Return only the letter text"""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         return response.content.strip()
-    except:
+    except Exception:
         return f"Dear Hiring Team at {job['org']},\n\nI am excited to apply for the {job['title']} position.\n\nThank you,\n{base['name']}"
 
 def build_resume_doc(base: dict, projects: list, general: list, jd_toks: list, summary: str, outfile: str):

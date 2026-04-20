@@ -1,9 +1,14 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
 from database.mysql_db import update_application_status
 from intelligence.adaptive_pattern import learn_from_application
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+    return _llm
 
 def handle_rejection(app_id: int, job: dict, resume_text: str) -> dict:
     print(f"\n💔 Rejection Handler: {job.get('title')} at {job.get('org')}")
@@ -24,9 +29,10 @@ Provide:
 Be direct and constructive."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         analysis = response.content.strip()
-    except:
+    except Exception:
         analysis = "Focus on the missing skills identified in your fit score analysis."
 
     return {
@@ -55,9 +61,10 @@ Generate:
 Format as plain text with clear sections."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         prep     = response.content.strip()
-    except:
+    except Exception:
         prep = f"Research {job.get('org')} thoroughly and prepare examples of your ML/DS projects."
 
     return {
@@ -88,9 +95,10 @@ Description: {job.get('description', '')[:500]}
 What key information is missing? List 3 specific questions to research."""
 
     try:
-        response  = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response  = _get_llm().invoke([HumanMessage(content=prompt)])
         questions = response.content.strip()
-    except:
+    except Exception:
         questions = "Research salary range, team size, and tech stack before applying."
 
     return {
