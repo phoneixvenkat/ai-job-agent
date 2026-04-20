@@ -6,6 +6,7 @@ from job_sources.remotive import fetch_remotive
 from job_sources.wellfound import fetch_wellfound
 from job_sources.indeed_rss import fetch_indeed_rss
 from job_sources.linkedin import fetch_linkedin
+from database.mysql_db import save_jobs_to_db
 from backend.utils.logger import get_logger
 log = get_logger('scout')
 
@@ -88,6 +89,10 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
 
     # Sort by freshness
     matched.sort(key=lambda x: x["freshness_score"], reverse=True)
+
+    # Persist to MySQL (INSERT IGNORE skips duplicates)
+    saved, skipped = save_jobs_to_db(matched[:top_n])
+    log.info(f"[OK] Persisted {saved} new jobs to DB ({skipped} duplicates skipped)")
 
     log.info(f"\n Top {min(len(matched), top_n)} jobs ready\n")
 

@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from backend.database.connection import get_db
+from fastapi import APIRouter
 from backend.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+_svc = AnalyticsService()
 
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db)):
-    return AnalyticsService(db).get_stats()
+def get_stats():
+    return _svc.get_stats()
 
 
 @router.get("/pipeline")
-def get_pipeline(db: Session = Depends(get_db)):
-    return AnalyticsService(db).agent_pipeline_status()
+def get_pipeline():
+    return _svc.agent_pipeline_status()
