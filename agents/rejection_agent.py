@@ -1,9 +1,22 @@
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 from database.mysql_db import update_application_status
 from intelligence.adaptive_pattern import learn_from_application
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+GROQ_API_KEY = "your_groq_api_key_here"
+llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=GROQ_API_KEY,
+    temperature=0
+)
+
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 def handle_rejection(app_id: int, job: dict, resume_text: str) -> dict:
     print(f"\n💔 Rejection Handler: {job.get('title')} at {job.get('org')}")

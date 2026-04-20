@@ -1,16 +1,31 @@
 projects:
+  text_summarization:
+    title: "Text Summarization Using NLP — Extractive Framework (2024)"
+    tags: ["python", "nlp", "nltk", "spacy", "machine learning", "text", "summarization", "web"]
+    bullets:
+      - "Developed extractive text summarization model using Python, NLTK, and SpaCy achieving 12% ROUGE-score improvement over baseline"
+      - "Built web-based interface for real-time user interaction improving accessibility for non-technical users"
+      - "Applied TF-IDF and sentence ranking algorithms to identify key sentences from large documents"
+
+  sentiment_analysis:
+    title: "Sentiment Analysis of Social Media Data"
+    tags: ["python", "deep learning", "lstm", "nlp", "twitter", "tableau", "classification", "neural"]
+    bullets:
+      - "Applied LSTM deep learning models to classify sentiment in large-scale Twitter datasets achieving 85% accuracy"
+      - "Outperformed baseline classifiers by 15% using bidirectional LSTM architecture with attention mechanism"
+      - "Built interactive Tableau dashboards to visualize sentiment trends across time and topics"
+
   jobpilot_ai:
     title: "JobPilot AI — Multi-Agent Job Application System"
-    tags: ["python", "langchain", "langgraph", "llm", "fastapi", "react", "mysql", "ai", "agent"]
+    tags: ["python", "langchain", "langgraph", "llm", "fastapi", "react", "mysql", "ai", "agent", "groq"]
     bullets:
-      - "Built 6-agent LangGraph system automating job search, resume tailoring, and application submission across 6 platforms"
-      - "Implemented LLM-based job matching using Llama3 with TF-IDF hybrid scoring achieving 85%+ accuracy"
-      - "Designed MySQL database with adaptive pattern learning that improves recommendations from application outcomes"
-      - "Built React TypeScript dashboard with real-time agent status, animated UI, and application tracking"
+      - "Built 6-agent LangGraph system automating job search and application across 5 platforms fetching 258+ jobs"
+      - "Implemented hybrid TF-IDF and Groq LLM matching scoring system with adaptive pattern learning from outcomes"
+      - "Designed React TypeScript dashboard with MySQL backend tracking applications with real-time analytics"
 
   agentic_dq:
     title: "Agentic Data Quality Monitor"
-    tags: ["python", "langchain", "langgraph", "duckdb", "great expectations", "streamlit", "llm", "agent"]
+    tags: ["python", "langchain", "langgraph", "duckdb", "great expectations", "streamlit", "llm", "agent", "data"]
     bullets:
       - "Designed multi-agent LangGraph system for automated data quality monitoring using Great Expectations"
       - "Integrated DuckDB for high-performance in-memory analytics with LLM-generated quality reports"
@@ -18,23 +33,15 @@ projects:
 
   cybermoe_ids:
     title: "CyberMoE-IDS — LLM-based Intrusion Detection System"
-    tags: ["python", "llm", "bert", "mistral", "llama", "cybersecurity", "machine learning", "nlp"]
+    tags: ["python", "llm", "bert", "cybersecurity", "machine learning", "nlp", "research", "security"]
     bullets:
-      - "Architected Mixture of Experts IDS combining SecureBERT, Mistral 7B, and LLaMA2 for network threat detection"
       - "Published systematic review of 25+ AI-based IDS papers at 2025 TRON Symposium"
+      - "Architected Mixture of Experts IDS combining SecureBERT and Mistral 7B for network threat detection"
       - "Achieved 94%+ detection accuracy on benchmark IoT datasets using ensemble LLM approach"
-
-  plant_health:
-    title: "Plant Health Monitoring — Mask R-CNN"
-    tags: ["python", "pytorch", "deep learning", "computer vision", "cnn", "object detection", "colab"]
-    bullets:
-      - "Implemented Mask R-CNN with ResNet50 FPN backbone for plant disease detection across 9 classes"
-      - "Processed COCO-format annotations achieving 78% mAP on plant disease classification"
-      - "Deployed model pipeline in Google Colab with automated data augmentation and training loops"
 
   aws_pipeline:
     title: "AWS Data Engineering Pipeline — CDC Health Data"
-    tags: ["aws", "s3", "glue", "emr", "athena", "spark", "python", "data engineering", "sql"]
+    tags: ["aws", "s3", "glue", "emr", "athena", "spark", "python", "data engineering", "sql", "cloud"]
     bullets:
       - "Built end-to-end AWS data pipeline processing CDC PLACES health data using S3, Glue, and EMR"
       - "Implemented Spark transformations on EMR cluster reducing processing time by 60%"
@@ -42,24 +49,18 @@ projects:
 
   rag_pipeline:
     title: "RAG Pipeline — Document Q&A System"
-    tags: ["python", "rag", "faiss", "sentence-transformers", "groq", "llm", "nlp", "langchain"]
+    tags: ["python", "rag", "faiss", "sentence-transformers", "groq", "llm", "nlp", "langchain", "vector"]
     bullets:
       - "Built RAG pipeline using sentence-transformers and FAISS vector store for semantic document search"
       - "Integrated Groq free API as LLM backend achieving sub-second response times"
       - "Implemented chunking strategies and retrieval optimization improving answer accuracy by 40%"
 
-  rl_taxi:
-    title: "Self-Driving Taxi — Reinforcement Learning"
-    tags: ["python", "reinforcement learning", "q-learning", "machine learning", "gym"]
-    bullets:
-      - "Compared Policy Iteration, Value Iteration, and Q-Learning algorithms on OpenAI Gym taxi environment"
-      - "Value Iteration achieved fastest convergence at 847 iterations with 100% success rate"
-      - "Implemented epsilon-greedy exploration strategy with dynamic learning rate scheduling"
-
 general_bullets:
-  - text: "Led cross-functional team delivering ML solutions 20% ahead of schedule"
-    tags: ["leadership", "team", "project management"]
-  - text: "Reduced model inference time by 45% through optimization and caching strategies"
-    tags: ["optimization", "performance", "mlops"]
-  - text: "Mentored junior developers in Python best practices and ML workflows"
-    tags: ["mentoring", "python", "teaching"]
+  - text: "Strong analytical and problem-solving skills with experience applying ML to real-world datasets"
+    tags: ["machine learning", "analytics", "problem solving", "data"]
+  - text: "Experience with end-to-end ML pipeline development from data collection to model deployment"
+    tags: ["mlops", "pipeline", "deployment", "python"]
+  - text: "Published researcher with expertise in AI-based security systems and LLM applications"
+    tags: ["research", "llm", "security", "publication"]
+  - text: "Dean's Scholarship recipient with strong academic performance in Data Science program"
+    tags: ["academic", "scholarship", "data science"]

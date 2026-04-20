@@ -1,9 +1,11 @@
 import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 import time
 import pathlib
 import yaml
 from docx import Document
-from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -12,7 +14,16 @@ ROOT = pathlib.Path(__file__).parent.parent
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+# Use Groq — fast, free, no local setup needed
+GROQ_API_KEY = "your_groq_api_key_here"
+llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=GROQ_API_KEY,
+    temperature=0.3
+)
+
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
 
 def load_yaml(path): 
     return yaml.safe_load(open(path, "r", encoding="utf-8"))

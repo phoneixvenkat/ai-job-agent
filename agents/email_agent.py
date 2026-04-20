@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 import imaplib
 import email
 import re
@@ -7,8 +10,17 @@ from langchain_core.messages import HumanMessage
 from database.mysql_db import get_connection, update_application_status
 from mysql.connector import Error
 import json
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+GROQ_API_KEY = "your_groq_api_key_here"
+llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=GROQ_API_KEY,
+    temperature=0
+)
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 EMAIL_CONFIG = {
     "gmail": {

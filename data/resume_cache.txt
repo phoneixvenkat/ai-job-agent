@@ -1,0 +1,41 @@
+VENKATASAIKUMAR ERLA
+￿ 203-627-5831 | ✉￿ venkatasaikumarerla@email.com | ￿ linkedin.com/in/venkata-sai-
+kumar-erla-327155263 | ￿ github.com/venkatasaikumarerla
+PROFESSIONAL SUMMARY
+Master’s student in Data Science at the University of New Haven (expected 2026), with
+strong foundations in machine learning, deep learning, and natural language processing.
+Skilled in Python, SQL, R, TensorFlow, and AWS cloud services, with hands-on experience
+developing data-driven projects including text summarization and sentiment analysis.
+Passionate about applying AI/ML to solve real-world problems, with academic projects
+spanning data engineering, visualization, and NLP. Seeking to leverage advanced data
+science skills and technical expertise to contribute to innovative solutions in the tech
+industry.
+CORE COMPETENCIES & TECHNICAL SKILLS
+- Programming & Data Science: Python · R · SQL · Scikit-learn · TensorFlow · NLTK · SpaCy
+- Machine Learning & AI: NLP · Text Summarization · Sentiment Analysis · Deep Learning
+(LSTM, Neural Nets) · Predictive Modeling · Statistical Analysis
+- Data Visualization & Tools: Tableau · Matplotlib · Pandas · NumPy
+- Cloud & Big Data: AWS (S3, Athena, Glue basics) · Hadoop (academic exposure)
+- Collaboration & Workflow: GitHub · Jupyter Notebook · Agile/Scrum
+EDUCATION
+University of New Haven – Tagliatela College of Engineering | West Haven, CT
+Master of Science in Data Science | Expected May 2026
+- Coursework: Machine Learning · Deep Learning · NLP · Big Data · Data Visualization ·
+Leadership in Data & AI Products · Data Ethics
+- Achievements: Dean’s Scholarship recipient for academic excellence
+Chalapathi Institute of Engineering & Technology | Lam, India
+Bachelor of Technology in Computer Science and Engineering | 2020 – 2024
+DATA & AI PROJECTS
+Text Summarization Using NLP: An Extractive Framework with Web-Based Interaction
+(2024)
+- Developed an extractive text summarization model using Python, NLP libraries (NLTK,
+SpaCy), and machine learning techniques.
+- Built a web-based interface for real-time user interaction, improving accessibility for non-
+technical users.- Improved summarization quality with ROUGE-score gains of 12% compared to baseline
+models.
+Sentiment Analysis of Social Media Data
+- Applied LSTM deep learning models to classify sentiment in large-scale Twitter datasets.
+- Achieved 85% accuracy, outperforming baseline classifiers.
+- Built interactive Tableau dashboards to visualize sentiment trends across time and topics.
+LANGUAGES
+English (Fluent) · Telugu (Native) · Hindi (Intermediate)
