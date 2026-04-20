@@ -2,6 +2,9 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict, List, Optional
 import yaml
 import pathlib
+from backend.utils.logger import get_logger
+log = get_logger('orchestrator')
+
 
 ROOT = pathlib.Path(__file__).parent.parent
 
@@ -22,38 +25,38 @@ class JobPilotState(TypedDict):
     errors:       List[str]
 
 def scout_node(state: JobPilotState) -> JobPilotState:
-    print("\n🔭 [Orchestrator] Running Scout Agent...")
+    log.info("\n [Orchestrator] Running Scout Agent...")
     from agents.scout_agent import run_scout
     try:
         result         = run_scout(state["config"], state["roles"], state["location"])
         state["raw_jobs"] = result["jobs"]
         state["status"]   = f"Scout: {len(result['jobs'])} jobs found"
-        print(f"   ✅ {len(result['jobs'])} jobs found")
+        log.info(f"    {len(result['jobs'])} jobs found")
     except Exception as e:
         state["errors"].append(f"Scout error: {e}")
         state["raw_jobs"] = []
     return state
 
 def duplicate_node(state: JobPilotState) -> JobPilotState:
-    print("\n🔍 [Orchestrator] Running Duplicate Agents...")
+    log.info("\n [Orchestrator] Running Duplicate Agents...")
     from agents.duplicate_agent import run_duplicate_agents
     try:
         result             = run_duplicate_agents(state["raw_jobs"])
         state["clean_jobs"] = result["clean_jobs"]
         state["status"]     = f"Dedup: {result['clean_count']} clean jobs"
-        print(f"   ✅ {result['clean_count']} clean jobs")
+        log.info(f"    {result['clean_count']} clean jobs")
     except Exception as e:
         state["errors"].append(f"Duplicate error: {e}")
         state["clean_jobs"] = state["raw_jobs"]
     return state
 
 def analyst_node(state: JobPilotState) -> JobPilotState:
-    print("\n🧪 [Orchestrator] Running Analyst Agent...")
+    log.info("\n [Orchestrator] Running Analyst Agent...")
     from agents.analyst_agent import run_analyst
     try:
         state["analyzed_jobs"] = run_analyst(state["clean_jobs"], state["resume_text"])
         state["status"]        = f"Analyst: {len(state['analyzed_jobs'])} jobs scored"
-        print(f"   ✅ {len(state['analyzed_jobs'])} jobs scored")
+        log.info(f"    {len(state['analyzed_jobs'])} jobs scored")
     except Exception as e:
         state["errors"].append(f"Analyst error: {e}")
         state["analyzed_jobs"] = state["clean_jobs"]
@@ -63,19 +66,19 @@ def llm_match_node(state: JobPilotState) -> JobPilotState:
     if not state.get("use_llm"):
         state["matched_jobs"] = state["analyzed_jobs"]
         return state
-    print("\n🧠 [Orchestrator] Running LLM Matcher...")
+    log.info("\n [Orchestrator] Running LLM Matcher...")
     from agents.llm_matcher import batch_match
     try:
         state["matched_jobs"] = batch_match(state["resume_text"], state["analyzed_jobs"][:10])
         state["status"]       = "LLM matching complete"
-        print(f"   ✅ LLM matching complete")
+        log.info(f"    LLM matching complete")
     except Exception as e:
         state["errors"].append(f"LLM match error: {e}")
         state["matched_jobs"] = state["analyzed_jobs"]
     return state
 
 def score_node(state: JobPilotState) -> JobPilotState:
-    print("\n📊 [Orchestrator] Scoring applications...")
+    log.info("\n [Orchestrator] Scoring applications...")
     jobs = state["matched_jobs"]
     for job in jobs:
         score = job.get("fit_score", 0)
@@ -91,7 +94,7 @@ def score_node(state: JobPilotState) -> JobPilotState:
         job["should_apply"] = score >= 40
     state["selected_jobs"] = [j for j in jobs if j.get("should_apply")]
     state["status"]        = f"Scoring: {len(state['selected_jobs'])} recommended"
-    print(f"   ✅ {len(state['selected_jobs'])} jobs recommended")
+    log.info(f"    {len(state['selected_jobs'])} jobs recommended")
     return state
 
 def should_use_llm(state: JobPilotState) -> str:
@@ -118,7 +121,7 @@ def build_graph():
     return workflow.compile()
 
 def run_full_pipeline(roles: list, location: str, resume_text: str, use_llm: bool = False) -> dict:
-    print("\n🤖 JobPilot AI — LangGraph Orchestrator Starting...\n")
+    log.info("\n JobPilot AI — LangGraph Orchestrator Starting...\n")
     cfg = yaml.safe_load(open(ROOT/"config.yaml","r",encoding="utf-8"))
 
     initial_state: JobPilotState = {
@@ -141,7 +144,7 @@ def run_full_pipeline(roles: list, location: str, resume_text: str, use_llm: boo
     graph  = build_graph()
     result = graph.invoke(initial_state)
 
-    print(f"\n✅ Pipeline complete!")
+    log.info(f"\n Pipeline complete!")
     print(f"   Jobs found:       {len(result['raw_jobs'])}")
     print(f"   Clean jobs:       {len(result['clean_jobs'])}")
     print(f"   Analyzed:         {len(result['analyzed_jobs'])}")

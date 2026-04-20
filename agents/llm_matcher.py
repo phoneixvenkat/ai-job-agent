@@ -14,6 +14,9 @@ llm = ChatGroq(
 )
 import json
 import re
+from backend.utils.logger import get_logger
+log = get_logger('llm_matcher')
+
 
 load_dotenv()
 llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
@@ -71,7 +74,7 @@ Return ONLY the JSON, no other text."""
         }
 
 def batch_match(resume_text: str, jobs: list) -> list:
-    print(f"\n🧠 LLM Matcher analyzing {len(jobs)} jobs...\n")
+    log.info(f"\n LLM Matcher analyzing {len(jobs)} jobs...\n")
     for i, job in enumerate(jobs, 1):
         print(f"  [{i}/{len(jobs)}] Matching: {job['title']} at {job['org']}")
         result = llm_match_job(resume_text, job)
@@ -83,5 +86,5 @@ def batch_match(resume_text: str, jobs: list) -> list:
         job["apply_decision"] = result["apply_decision"]
         print(f"     Score: {result['llm_score']}% | {result['recommendation']} | {result['apply_decision'][:50]}")
     jobs.sort(key=lambda x: x["llm_score"], reverse=True)
-    print(f"\n✅ LLM matching complete!\n")
+    log.info(f"\n LLM matching complete!\n")
     return jobs

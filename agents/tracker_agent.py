@@ -6,6 +6,9 @@ import csv
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from backend.utils.logger import get_logger
+log = get_logger('tracker')
+
 
 ROOT     = pathlib.Path(__file__).parent.parent
 DB_PATH  = str(ROOT / "artifacts" / "jobpilot.db")
@@ -109,7 +112,7 @@ def log_application(job: dict, resume_path: str, cover_path: str, status: str = 
 
     # Also log to CSV
     log_to_csv(job, resume_path, cover_path, status, applied_at)
-    print(f"   ✅ Logged: {job['title']} at {job['org']} — {status}")
+    log.info(f"    Logged: {job['title']} at {job['org']} — {status}")
     return app_id
 
 def log_to_csv(job: dict, resume_path: str, cover_path: str, status: str, applied_at: str):
@@ -320,11 +323,11 @@ def generate_excel_report() -> str:
         ws3.row_dimensions[i].height = 18
 
     wb.save(path)
-    print(f"✅ Excel report saved: {path}")
+    log.info(f" Excel report saved: {path}")
     return path
 
 if __name__ == "__main__":
     init_db()
-    print("✅ Database initialized")
+    log.info(" Database initialized")
     path = generate_excel_report()
-    print(f"✅ Report generated: {path}")
+    log.info(f" Report generated: {path}")

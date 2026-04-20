@@ -10,6 +10,9 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
+from backend.utils.logger import get_logger
+log = get_logger('analyst')
+
 
 GROQ_API_KEY = "your_groq_api_key_here"
 llm = ChatGroq(
@@ -118,7 +121,7 @@ def analyze_job(job: dict, resume_text: str, decode: bool = False) -> dict:
     return job
 
 def run_analyst(jobs: list, resume_text: str, decode_jds: bool = False) -> list:
-    print(f"\n🧪 Analyst Agent analyzing {len(jobs)} jobs...\n")
+    log.info(f"\n Analyst Agent analyzing {len(jobs)} jobs...\n")
     analyzed = []
     for i, job in enumerate(jobs, 1):
         description = job.get("description", job.get("title", ""))
@@ -137,5 +140,5 @@ def run_analyst(jobs: list, resume_text: str, decode_jds: bool = False) -> list:
         analyzed.append(job)
 
     analyzed.sort(key=lambda x: x["fit_score"], reverse=True)
-    print(f"✅ Analysis complete. Top fit: {analyzed[0]['fit_score']}%\n")
+    log.info(f" Analysis complete. Top fit: {analyzed[0]['fit_score']}%\n")
     return analyzed

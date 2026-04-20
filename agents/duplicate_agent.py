@@ -2,6 +2,9 @@ import hashlib
 import re
 from database.mysql_db import get_connection, check_duplicate
 from mysql.connector import Error
+from backend.utils.logger import get_logger
+log = get_logger('duplicate')
+
 
 def normalize(text: str) -> str:
     text = text.lower().strip()
@@ -15,7 +18,7 @@ def get_job_hash(title: str, org: str) -> str:
 
 # ── Agent 1 — In-Memory Deduplicator ──────────────────
 def deduplicate_in_memory(jobs: list) -> tuple:
-    print(f"\n🔍 Duplicate Agent 1 — In-memory deduplication...")
+    log.info(f"\n Duplicate Agent 1 — In-memory deduplication...")
     seen     = {}
     unique   = []
     dupes    = []
@@ -29,12 +32,12 @@ def deduplicate_in_memory(jobs: list) -> tuple:
             seen[job_hash] = job
             unique.append(job)
 
-    print(f"  ✅ Agent 1: {len(unique)} unique | {len(dupes)} duplicates removed\n")
+    log.info(f"   Agent 1: {len(unique)} unique | {len(dupes)} duplicates removed\n")
     return unique, dupes
 
 # ── Agent 2 — Database Deduplicator ───────────────────
 def deduplicate_against_database(jobs: list) -> tuple:
-    print(f"🔍 Duplicate Agent 2 — Database deduplication...")
+    log.info(f" Duplicate Agent 2 — Database deduplication...")
     new_jobs      = []
     already_applied = []
 
@@ -45,12 +48,12 @@ def deduplicate_against_database(jobs: list) -> tuple:
         else:
             new_jobs.append(job)
 
-    print(f"  ✅ Agent 2: {len(new_jobs)} new | {len(already_applied)} already applied\n")
+    log.info(f"   Agent 2: {len(new_jobs)} new | {len(already_applied)} already applied\n")
     return new_jobs, already_applied
 
 # ── Run Both Agents ────────────────────────────────────
 def run_duplicate_agents(jobs: list) -> dict:
-    print("\n🤖 Running Duplicate Detection Agents...\n")
+    log.info("\n Running Duplicate Detection Agents...\n")
     original_count = len(jobs)
 
     # Agent 1 — remove in-memory duplicates
@@ -59,7 +62,7 @@ def run_duplicate_agents(jobs: list) -> dict:
     # Agent 2 — remove already applied jobs
     new_jobs, db_dupes = deduplicate_against_database(unique_jobs)
 
-    print(f"📊 Duplicate Report:")
+    log.info(f" Duplicate Report:")
     print(f"   Original:        {original_count}")
     print(f"   In-memory dupes: {len(memory_dupes)}")
     print(f"   Already applied: {len(db_dupes)}")

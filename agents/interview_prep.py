@@ -1,10 +1,17 @@
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
-from fpdf import FPDF
+from fpdf2 import FPDF
 import pathlib
 import datetime
+from backend.utils.logger import get_logger
 
-llm  = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+log  = get_logger("interview")
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_ollama import ChatOllama
+        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+    return _llm
 ROOT = pathlib.Path(__file__).parent.parent
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
@@ -26,7 +33,8 @@ Generate:
 Be specific and actionable."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        from langchain_core.messages import HumanMessage
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         content  = response.content.strip()
     except:
         content = f"""## TECHNICAL QUESTIONS
@@ -75,7 +83,7 @@ Be specific and actionable."""
                 pdf.multi_cell(0, 6, line)
         pdf.output(path)
     except Exception as e:
-        print(f"PDF generation error: {e}")
+        log.error("PDF generation error: %s", e)
         path = ""
 
     return {

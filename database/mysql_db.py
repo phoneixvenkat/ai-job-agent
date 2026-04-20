@@ -1,8 +1,11 @@
 import mysql.connector
 from mysql.connector import Error
 import os
-import os
+import datetime
 from dotenv import load_dotenv
+from backend.utils.logger import get_logger
+log = get_logger('mysql')
+
 load_dotenv()
 
 DB_CONFIG = {
@@ -12,6 +15,18 @@ DB_CONFIG = {
     "password": os.getenv("MYSQL_PASSWORD", "jobpilot123"),
     "database": os.getenv("MYSQL_DATABASE", "jobpilot")
 }
+
+
+def _serialize(row: dict) -> dict:
+    result = {}
+    for k, v in row.items():
+        if isinstance(v, (datetime.datetime, datetime.date)):
+            result[k] = str(v)
+        elif isinstance(v, bytes):
+            result[k] = v.decode("utf-8", errors="ignore")
+        else:
+            result[k] = v
+    return result
 
 
 def get_connection():
@@ -124,11 +139,11 @@ def init_database():
         conn.commit()
         cursor.close()
         conn.close()
-        print("✅ MySQL database initialized successfully!")
+        log.info(" MySQL database initialized successfully!")
         return True
 
     except Error as e:
-        print(f"❌ Database init error: {e}")
+        log.error(f" Database init error: {e}")
         return False
 
 def save_job(job: dict) -> int:
@@ -185,7 +200,7 @@ def log_application(job: dict, resume_path: str, cover_path: str,
         app_id = cursor.lastrowid
         cursor.close()
         conn.close()
-        print(f"✅ Logged: {job['title']} at {job['org']} — {status}")
+        log.info(f" Logged: {job['title']} at {job['org']} — {status}")
         return app_id
     except Error as e:
         print(f"Log application error: {e}")
@@ -302,6 +317,52 @@ def get_adaptive_patterns() -> list:
     except Error as e:
         print(f"Get patterns error: {e}")
         return []
+
+def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
+    """Return (jobs_list, total_count) from jobs table."""
+    conn = get_connection()
+    if not conn:
+        return [], 0
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) as c FROM jobs")
+        total = cursor.fetchone()["c"]
+        cursor.execute("""
+            SELECT id, title, org AS company, location, source, url,
+                   fit_score AS match_score, status, created_at
+            FROM jobs
+            ORDER BY fit_score DESC, created_at DESC
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [_serialize(r) for r in rows], total
+    except Error as e:
+        print(f"get_all_jobs error: {e}")
+        return [], 0
+
+
+def get_followup_applications() -> list:
+    """Return applications flagged for follow-up."""
+    conn = get_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM applications
+            WHERE follow_up_needed = 1
+            ORDER BY applied_at ASC
+        """)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [_serialize(r) for r in rows]
+    except Error as e:
+        print(f"get_followup_applications error: {e}")
+        return []
+
 
 if __name__ == "__main__":
     init_database()

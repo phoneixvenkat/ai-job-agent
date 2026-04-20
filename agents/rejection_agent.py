@@ -7,6 +7,9 @@ from database.mysql_db import update_application_status
 from intelligence.adaptive_pattern import learn_from_application
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
+from backend.utils.logger import get_logger
+log = get_logger('rejection')
+
 
 GROQ_API_KEY = "your_groq_api_key_here"
 llm = ChatGroq(
@@ -19,7 +22,7 @@ load_dotenv()
 llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 def handle_rejection(app_id: int, job: dict, resume_text: str) -> dict:
-    print(f"\n💔 Rejection Handler: {job.get('title')} at {job.get('org')}")
+    log.info(f"\n Rejection Handler: {job.get('title')} at {job.get('org')}")
     update_application_status(app_id, "rejected")
     learn_from_application(job, "rejected")
 
@@ -50,7 +53,7 @@ Be direct and constructive."""
     }
 
 def handle_acceptance(app_id: int, job: dict) -> dict:
-    print(f"\n🎉 Acceptance Handler: {job.get('title')} at {job.get('org')}")
+    log.info(f"\n Acceptance Handler: {job.get('title')} at {job.get('org')}")
     update_application_status(app_id, "interview")
     learn_from_application(job, "interview")
 
@@ -81,7 +84,7 @@ Format as plain text with clear sections."""
     }
 
 def handle_offer(app_id: int, job: dict) -> dict:
-    print(f"\n🏆 Offer Handler: {job.get('title')} at {job.get('org')}")
+    log.info(f"\n Offer Handler: {job.get('title')} at {job.get('org')}")
     update_application_status(app_id, "offer")
     learn_from_application(job, "offer")
     return {
@@ -91,7 +94,7 @@ def handle_offer(app_id: int, job: dict) -> dict:
     }
 
 def handle_need_more_info(app_id: int, job: dict) -> dict:
-    print(f"\n❓ More Info Handler: {job.get('title')} at {job.get('org')}")
+    log.info(f"\n More Info Handler: {job.get('title')} at {job.get('org')}")
 
     prompt = f"""This job needs more information before applying.
 
