@@ -6,6 +6,9 @@ from job_sources.remotive import fetch_remotive
 from job_sources.wellfound import fetch_wellfound
 from job_sources.indeed_rss import fetch_indeed_rss
 from job_sources.linkedin import fetch_linkedin
+from backend.utils.logger import get_logger
+log = get_logger('scout')
+
 
 def deduplicate(jobs: list) -> list:
     seen = set()
@@ -37,7 +40,7 @@ def score_freshness(job: dict) -> int:
     return 5
 
 def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
-    print("\n🔭 Scout Agent starting...\n")
+    log.info("\n Scout Agent starting...\n")
     filters  = config.get("filters", {})
     sources  = config.get("sources", {})
     required = filters.get("required", [])
@@ -69,15 +72,15 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
         print(f"Fetching Wellfound for '{role}'...")
         all_jobs += fetch_wellfound(role, limit=10)
 
-    print(f"\n📦 Total fetched: {len(all_jobs)}")
+    log.info(f"\n Total fetched: {len(all_jobs)}")
 
     # Deduplicate
     all_jobs = deduplicate(all_jobs)
-    print(f"✅ After deduplication: {len(all_jobs)}")
+    log.info(f" After deduplication: {len(all_jobs)}")
 
     # Filter
     matched = [j for j in all_jobs if match_job(j, required, exclude)]
-    print(f"✅ After filtering: {len(matched)}")
+    log.info(f" After filtering: {len(matched)}")
 
     # Add freshness score
     for job in matched:
@@ -86,7 +89,7 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
     # Sort by freshness
     matched.sort(key=lambda x: x["freshness_score"], reverse=True)
 
-    print(f"\n🎯 Top {min(len(matched), top_n)} jobs ready\n")
+    log.info(f"\n Top {min(len(matched), top_n)} jobs ready\n")
 
     return {
         "status":    "success",
@@ -100,4 +103,4 @@ if __name__ == "__main__":
     cfg = yaml.safe_load(open("config.yaml", "r", encoding="utf-8"))
     result = run_scout(cfg, roles=["data scientist", "machine learning engineer", "AI engineer"])
     for i, job in enumerate(result["jobs"][:5], 1):
-        print(f"{i}. {job['title']} — {job['org']} [{job['source']}] 🔥{job['freshness_score']}")
+        log.info(f"{i}. {job['title']} — {job['org']} [{job['source']}] {job['freshness_score']}")

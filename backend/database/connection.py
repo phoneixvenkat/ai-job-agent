@@ -6,7 +6,7 @@ from backend.config import get_settings
 settings = get_settings()
 
 DATABASE_URL = (
-    f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}"
+    f"mysql+mysqlconnector://{settings.DB_USER}:{settings.DB_PASSWORD}"
     f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 )
 

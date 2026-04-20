@@ -8,6 +8,9 @@ from docx import Document
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 import urllib3
+from backend.utils.logger import get_logger
+log = get_logger('writer')
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -142,7 +145,7 @@ def build_resume_doc(base: dict, projects: list, general: list, jd_toks: list, s
     doc.save(outfile)
 
 def run_writer(job: dict, resume_text: str, use_llm: bool = True) -> dict:
-    print(f"\n✍️  Writer Agent: {job['title']} at {job['org']}")
+    log.info(f"\n  Writer Agent: {job['title']} at {job['org']}")
 
     base = load_yaml(ROOT/"data"/"base_resume.yaml")
     bank = load_yaml(ROOT/"data"/"bullet_bank.yaml")

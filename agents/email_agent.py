@@ -12,6 +12,9 @@ from mysql.connector import Error
 import json
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
+from backend.utils.logger import get_logger
+log = get_logger('email_agent')
+
 
 GROQ_API_KEY = "your_groq_api_key_here"
 llm = ChatGroq(
@@ -38,10 +41,10 @@ def connect_email(email_addr: str, password: str, provider: str = "gmail"):
         config = EMAIL_CONFIG[provider]
         mail   = imaplib.IMAP4_SSL(config["imap_server"], config["imap_port"])
         mail.login(email_addr, password)
-        print(f"✅ Connected to {provider} inbox")
+        log.info(f" Connected to {provider} inbox")
         return mail
     except Exception as e:
-        print(f"❌ Email connection error: {e}")
+        log.error(f" Email connection error: {e}")
         return None
 
 def fetch_recent_emails(mail, limit: int = 20) -> list:
@@ -159,10 +162,10 @@ def save_email_intel(data: dict):
         print(f"Save email intel error: {e}")
 
 def run_email_agent(email_addr: str, password: str, provider: str = "gmail") -> list:
-    print("\n📧 Email Intelligence Agent starting...\n")
+    log.info("\n Email Intelligence Agent starting...\n")
     mail   = connect_email(email_addr, password, provider)
     if not mail:
-        print("❌ Could not connect to email")
+        log.info(" Could not connect to email")
         return []
 
     emails  = fetch_recent_emails(mail, limit=30)
@@ -191,9 +194,9 @@ def run_email_agent(email_addr: str, password: str, provider: str = "gmail") -> 
         save_email_intel(result)
         results.append(result)
 
-        print(f"📬 {classification['classification']}: {em['subject'][:50]}")
+        log.info(f" {classification['classification']}: {em['subject'][:50]}")
         print(f"   From: {sender_name} at {company}")
         print(f"   LinkedIn: {linkedin_url}\n")
 
-    print(f"✅ Email Agent complete. {len(results)} job-related emails processed.\n")
+    log.info(f" Email Agent complete. {len(results)} job-related emails processed.\n")
     return results

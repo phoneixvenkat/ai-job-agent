@@ -3,6 +3,9 @@ from langchain_core.messages import HumanMessage
 from database.mysql_db import get_connection
 from mysql.connector import Error
 import datetime
+from backend.utils.logger import get_logger
+log = get_logger('followup')
+
 
 llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
 
@@ -90,7 +93,7 @@ def mark_followup_done(app_id: int):
         print(f"Mark followup error: {e}")
 
 def run_followup_agent() -> list:
-    print("\n📧 Follow-up Agent starting...")
+    log.info("\n Follow-up Agent starting...")
     pending  = get_pending_followups()
     print(f"   {len(pending)} follow-ups due today")
     drafts   = []
@@ -98,5 +101,5 @@ def run_followup_agent() -> list:
         print(f"   Drafting follow-up for {app['title']} at {app['org']}")
         draft = generate_followup_email(app)
         drafts.append(draft)
-    print(f"✅ {len(drafts)} follow-up drafts generated")
+    log.info(f" {len(drafts)} follow-up drafts generated")
     return drafts

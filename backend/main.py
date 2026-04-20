@@ -10,7 +10,8 @@ import yaml
 
 from database.mysql_db import (
     init_database, log_application, get_all_applications,
-    update_application_status, get_stats, check_duplicate, save_job
+    update_application_status, get_stats, check_duplicate, save_job,
+    get_all_jobs, get_followup_applications,
 )
 from agents.scout_agent      import run_scout
 from agents.analyst_agent    import run_analyst
@@ -66,7 +67,6 @@ resume_store = {"text": "", "filename": ""}
 
 if RESUME_CACHE.exists():
     resume_store["text"] = RESUME_CACHE.read_text(encoding="utf-8")
-    print(f"✅ Loaded cached resume ({len(resume_store['text'])} chars)")
 
 
 # ── Resume Upload ──────────────────────────────────────────
@@ -152,8 +152,9 @@ def search_jobs(req: SearchRequest):
 
 
 @app.get("/api/jobs")
-def get_jobs():
-    return {"jobs": []}
+def get_jobs(limit: int = 50, offset: int = 0):
+    jobs, total = get_all_jobs(limit=limit, offset=offset)
+    return {"success": True, "data": {"jobs": jobs, "total": total}, "error": None}
 
 
 # ── Tailor Resume ──────────────────────────────────────────
@@ -283,10 +284,20 @@ def patterns():
 # ── Follow-up Agent ────────────────────────────────────────
 @app.get("/api/followups")
 def get_followups():
-    from agents.followup_agent import get_pending_followups, generate_followup_email
-    pending = get_pending_followups()
-    drafts  = [generate_followup_email(app) for app in pending[:5]]
-    return {"followups": drafts, "count": len(drafts)}
+    # Applications flagged by check_followups() (no response after 7 days)
+    flagged = get_followup_applications()
+    # Also include agent-drafted follow-ups for pending items
+    try:
+        from agents.followup_agent import get_pending_followups, generate_followup_email
+        pending = get_pending_followups()
+        drafts  = [generate_followup_email(app) for app in pending[:5]]
+    except Exception:
+        drafts = []
+    return {
+        "success": True,
+        "data": {"followups": drafts, "flagged": flagged, "count": len(drafts)},
+        "error": None,
+    }
 
 
 @app.post("/api/followups/done/{app_id}")
