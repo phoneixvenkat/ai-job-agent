@@ -335,6 +335,38 @@ def orchestrate(req: OrchestratorRequest):
     return result
 
 
+# ── Settings ────────────────────────────────────────────────
+_settings_store: dict = {
+    "full_name": "Venkatasaikumar Erla",
+    "email": "venkatasaikumarerla@email.com",
+    "phone": "+1-203-627-5831",
+    "location": "West Haven, CT",
+    "max_applications_per_day": 5,
+    "auto_apply": False,
+}
+
+
+@app.get("/api/settings")
+def get_settings_endpoint():
+    return {"success": True, "data": _settings_store, "error": None}
+
+
+class SettingsUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    max_applications_per_day: Optional[int] = None
+    auto_apply: Optional[bool] = None
+
+
+@app.post("/api/settings")
+def save_settings(req: SettingsUpdate):
+    update = req.dict(exclude_none=True)
+    _settings_store.update(update)
+    return {"success": True, "data": _settings_store, "error": None}
+
+
 # ── Dry Run ─────────────────────────────────────────────────
 @app.post("/api/jobs/dryrun")
 def dry_run(req: SearchRequest):

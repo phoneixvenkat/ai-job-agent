@@ -34,7 +34,7 @@ def get_connection():
         conn = mysql.connector.connect(**DB_CONFIG)
         return conn
     except Error as e:
-        print(f"MySQL connection error: {e}")
+        log.error(f"MySQL connection error: {e}")
         return None
 
 def init_database():
@@ -67,9 +67,21 @@ def init_database():
                 status          VARCHAR(32) DEFAULT 'new',
                 posted_at       VARCHAR(128),
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                is_duplicate    BOOLEAN DEFAULT FALSE
+                is_duplicate    BOOLEAN DEFAULT FALSE,
+                UNIQUE KEY uq_url (url(500))
             )
         """)
+
+        # Safe ALTER for existing tables without UNIQUE KEY
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.statistics
+            WHERE table_schema='jobpilot' AND table_name='jobs' AND index_name='uq_url'
+        """)
+        if cursor.fetchone()[0] == 0:
+            try:
+                cursor.execute("ALTER TABLE jobs ADD UNIQUE KEY uq_url (url(500))")
+            except Error:
+                pass
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS applications (
@@ -91,8 +103,46 @@ def init_database():
                 applied_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 followup_date   DATE,
                 followup_done   BOOLEAN DEFAULT FALSE,
+                follow_up_needed TINYINT(1) DEFAULT 0,
                 score_explanation TEXT,
                 notes           TEXT
+            )
+        """)
+
+        # Safe ALTER for follow_up_needed on existing tables
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema='jobpilot' AND table_name='applications' AND column_name='follow_up_needed'
+        """)
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("ALTER TABLE applications ADD COLUMN follow_up_needed TINYINT(1) DEFAULT 0")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_log (
+                id              INT AUTO_INCREMENT PRIMARY KEY,
+                message_id      VARCHAR(256) UNIQUE,
+                application_id  INT,
+                email_from      VARCHAR(256),
+                email_subject   VARCHAR(512),
+                email_body      TEXT,
+                classification  VARCHAR(64),
+                confidence      FLOAT DEFAULT 0,
+                sender_name     VARCHAR(256),
+                sender_linkedin VARCHAR(512),
+                company_info    TEXT,
+                detected_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS agent_log (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                agent_name  VARCHAR(64),
+                status      VARCHAR(32),
+                message     TEXT,
+                result_json TEXT,
+                started_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                finished_at TIMESTAMP NULL
             )
         """)
 
@@ -139,11 +189,11 @@ def init_database():
         conn.commit()
         cursor.close()
         conn.close()
-        log.info(" MySQL database initialized successfully!")
+        log.info("[OK] MySQL database initialized successfully!")
         return True
 
     except Error as e:
-        log.error(f" Database init error: {e}")
+        log.error(f"[ERROR] Database init error: {e}")
         return False
 
 def save_job(job: dict) -> int:
@@ -171,15 +221,56 @@ def save_job(job: dict) -> int:
         conn.close()
         return job_id
     except Error as e:
-        print(f"Save job error: {e}")
+        log.error(f"Save job error: {e}")
         return -1
+
+
+def save_jobs_to_db(jobs: list) -> tuple:
+    """Bulk-insert jobs using INSERT IGNORE to skip URL duplicates. Returns (saved, skipped)."""
+    conn = get_connection()
+    if not conn:
+        return 0, len(jobs)
+    saved = 0
+    skipped = 0
+    try:
+        cursor = conn.cursor()
+        for job in jobs:
+            salary = job.get("salary", {})
+            try:
+                cursor.execute("""
+                    INSERT IGNORE INTO jobs
+                        (title, org, location, url, source, description,
+                         fit_score, llm_score, ats_score, salary_min, salary_max,
+                         freshness_score, posted_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    job.get("title",""), job.get("org",""), job.get("location",""),
+                    job.get("url",""), job.get("source",""),
+                    str(job.get("description",""))[:2000],
+                    job.get("fit_score",0), job.get("llm_score",0), job.get("ats_score",0),
+                    salary.get("min",0) if isinstance(salary, dict) else 0,
+                    salary.get("max",0) if isinstance(salary, dict) else 0,
+                    job.get("freshness_score",5), job.get("posted_at","")
+                ))
+                if cursor.rowcount > 0:
+                    saved += 1
+                else:
+                    skipped += 1
+            except Error:
+                skipped += 1
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Error as e:
+        log.error(f"save_jobs_to_db error: {e}")
+    return saved, skipped
+
 
 def log_application(job: dict, resume_path: str, cover_path: str,
                     status: str = "applied", explanation: str = "") -> int:
     conn = get_connection()
     if not conn: return -1
     try:
-        import datetime
         cursor   = conn.cursor()
         salary   = job.get("salary", {})
         followup = (datetime.datetime.now() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")
@@ -193,17 +284,18 @@ def log_application(job: dict, resume_path: str, cover_path: str,
             job.get("title",""), job.get("org",""), job.get("location",""),
             job.get("url",""), job.get("source",""),
             job.get("fit_score",0), job.get("llm_score",0), job.get("ats_score",0),
-            salary.get("min",0), salary.get("max",0),
+            salary.get("min",0) if isinstance(salary, dict) else 0,
+            salary.get("max",0) if isinstance(salary, dict) else 0,
             status, resume_path, cover_path, followup, explanation
         ))
         conn.commit()
         app_id = cursor.lastrowid
         cursor.close()
         conn.close()
-        log.info(f" Logged: {job['title']} at {job['org']} — {status}")
+        log.info(f"[OK] Logged: {job.get('title','')} at {job.get('org','')} - {status}")
         return app_id
     except Error as e:
-        print(f"Log application error: {e}")
+        log.error(f"Log application error: {e}")
         return -1
 
 def get_all_applications() -> list:
@@ -215,9 +307,9 @@ def get_all_applications() -> list:
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
-        return rows
+        return [_serialize(r) for r in rows]
     except Error as e:
-        print(f"Get applications error: {e}")
+        log.error(f"Get applications error: {e}")
         return []
 
 def update_application_status(app_id: int, status: str):
@@ -230,7 +322,7 @@ def update_application_status(app_id: int, status: str):
         cursor.close()
         conn.close()
     except Error as e:
-        print(f"Update status error: {e}")
+        log.error(f"Update status error: {e}")
 
 def get_stats() -> dict:
     conn = get_connection()
@@ -260,7 +352,7 @@ def get_stats() -> dict:
             "avg_fit":   round(float(avg_fit), 1)
         }
     except Error as e:
-        print(f"Get stats error: {e}")
+        log.error(f"Get stats error: {e}")
         return {}
 
 def check_duplicate(title: str, org: str) -> bool:
@@ -277,7 +369,7 @@ def check_duplicate(title: str, org: str) -> bool:
         conn.close()
         return count > 0
     except Error as e:
-        print(f"Check duplicate error: {e}")
+        log.error(f"Check duplicate error: {e}")
         return False
 
 def save_adaptive_pattern(pattern_type: str, pattern_value: str, success: bool):
@@ -298,7 +390,7 @@ def save_adaptive_pattern(pattern_type: str, pattern_value: str, success: bool):
         cursor.close()
         conn.close()
     except Error as e:
-        print(f"Save pattern error: {e}")
+        log.error(f"Save pattern error: {e}")
 
 def get_adaptive_patterns() -> list:
     conn = get_connection()
@@ -315,7 +407,7 @@ def get_adaptive_patterns() -> list:
         conn.close()
         return rows
     except Error as e:
-        print(f"Get patterns error: {e}")
+        log.error(f"Get patterns error: {e}")
         return []
 
 def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
@@ -339,8 +431,25 @@ def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
         conn.close()
         return [_serialize(r) for r in rows], total
     except Error as e:
-        print(f"get_all_jobs error: {e}")
+        log.error(f"get_all_jobs error: {e}")
         return [], 0
+
+
+def get_applications_for_report() -> list:
+    """Return all applications with all columns for Excel report generation."""
+    conn = get_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM applications ORDER BY applied_at DESC")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return [_serialize(r) for r in rows]
+    except Error as e:
+        log.error(f"get_applications_for_report error: {e}")
+        return []
 
 
 def get_followup_applications() -> list:
@@ -360,8 +469,72 @@ def get_followup_applications() -> list:
         conn.close()
         return [_serialize(r) for r in rows]
     except Error as e:
-        print(f"get_followup_applications error: {e}")
+        log.error(f"get_followup_applications error: {e}")
         return []
+
+
+def check_followups() -> int:
+    """Flag applications with no response after 7 days. Returns count flagged."""
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cursor = conn.cursor()
+        cutoff = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            UPDATE applications
+            SET follow_up_needed = 1
+            WHERE status = 'applied'
+              AND applied_at <= %s
+              AND follow_up_needed = 0
+        """, (cutoff,))
+        count = cursor.rowcount
+        conn.commit()
+        cursor.close()
+        conn.close()
+        if count:
+            log.info(f"[OK] Flagged {count} applications for follow-up")
+        return count
+    except Error as e:
+        log.error(f"check_followups error: {e}")
+        return 0
+
+
+def get_processed_message_ids() -> set:
+    """Return set of already-processed email message IDs."""
+    conn = get_connection()
+    if not conn:
+        return set()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT message_id FROM email_log WHERE message_id IS NOT NULL")
+        ids = {row[0] for row in cursor.fetchall()}
+        cursor.close()
+        conn.close()
+        return ids
+    except Error as e:
+        log.error(f"get_processed_message_ids error: {e}")
+        return set()
+
+
+def mark_message_processed(message_id: str, classification: str,
+                            confidence: float, subject: str, from_addr: str):
+    """Insert a processed email record to prevent re-processing."""
+    conn = get_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT IGNORE INTO email_log
+                (message_id, classification, confidence, email_subject, email_from)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (message_id, classification, confidence, subject, from_addr))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Error as e:
+        log.error(f"mark_message_processed error: {e}")
 
 
 if __name__ == "__main__":

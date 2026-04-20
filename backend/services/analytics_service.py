@@ -1,39 +1,30 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from backend.database.models import Application, AgentLog
+from database.mysql_db import get_stats, get_all_applications
+from backend.utils.logger import get_logger
+log = get_logger('analytics')
 
 
 class AnalyticsService:
-    def __init__(self, db: Session):
-        self.db = db
-
     def get_stats(self) -> dict:
-        total     = self.db.query(func.count(Application.id)).scalar() or 0
-        submitted = self.db.query(func.count(Application.id)).filter(Application.status == "submitted").scalar() or 0
-        interview = self.db.query(func.count(Application.id)).filter(Application.status == "interviewing").scalar() or 0
-        offer     = self.db.query(func.count(Application.id)).filter(Application.status == "offer").scalar() or 0
-        rejected  = self.db.query(func.count(Application.id)).filter(Application.status == "rejected").scalar() or 0
-        return {
-            "total":     total,
-            "applied":   submitted,
-            "interview": interview,
-            "offer":     offer,
-            "rejected":  rejected,
-        }
+        return get_stats()
 
     def agent_pipeline_status(self) -> list:
-        logs = (
-            self.db.query(AgentLog)
-            .order_by(AgentLog.started_at.desc())
-            .limit(20)
-            .all()
-        )
-        return [
-            {
-                "agent_name": log.agent_name,
-                "status":     log.status,
-                "message":    log.message,
-                "started_at": log.started_at,
-            }
-            for log in logs
-        ]
+        from database.mysql_db import get_connection
+        conn = get_connection()
+        if not conn:
+            return []
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT agent_name, status, message, started_at, finished_at
+                FROM agent_log
+                ORDER BY started_at DESC
+                LIMIT 20
+            """)
+            rows = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            from database.mysql_db import _serialize
+            return [_serialize(r) for r in rows]
+        except Exception as e:
+            log.error(f"agent_pipeline_status error: {e}")
+            return []
