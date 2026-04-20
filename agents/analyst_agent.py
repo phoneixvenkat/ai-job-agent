@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -5,8 +8,18 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0)
+GROQ_API_KEY = "your_groq_api_key_here"
+llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=GROQ_API_KEY,
+    temperature=0
+)
+
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 def calculate_fit_score(resume_text: str, job_description: str) -> float:
     try:

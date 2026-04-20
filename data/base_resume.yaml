@@ -1,13 +1,31 @@
 name: "Venkatasaikumar Erla"
-email: "venkatasaikumarerla@gmail.com"
 phone: "+1-203-627-5831"
-location: "New York, NY"
+email: "venkatasaikumarerla@email.com"
+location: "West Haven, CT"
 links:
-  - "LinkedIn: https://www.linkedin.com/in/venkata-sai-kumar-erla-327155263/"
-summary: >
-  Graduate student focused on data analytics & ML for healthcare. Strong in SQL and Python (pandas, numpy).
-education:
-  - school: "NYU – M.S."
-    dates: "2024–2026"
+  - "linkedin.com/in/venkata-saikumar-erla-327155263"
+  - "github.com/phoneixvenkat"
+
+summary: "Master's student in Data Science at the University of New Haven (expected 2026), with strong foundations in machine learning, deep learning, and natural language processing. Skilled in Python, SQL, R, TensorFlow, and AWS cloud services, with hands-on experience developing data-driven projects including text summarization and sentiment analysis. Passionate about applying AI/ML to solve real-world problems."
+
 skills:
-  - "Python, SQL, Pandas, NumPy, scikit-learn, PySpark"
+  - "Programming: Python · R · SQL · Scikit-learn · TensorFlow · NLTK · SpaCy"
+  - "ML/AI: NLP · Text Summarization · Sentiment Analysis · Deep Learning (LSTM) · Predictive Modeling"
+  - "Data Visualization: Tableau · Matplotlib · Pandas · NumPy"
+  - "Cloud: AWS (S3, Athena, Glue) · Hadoop"
+  - "Tools: GitHub · Jupyter Notebook · Agile/Scrum · FastAPI · LangChain · LangGraph"
+
+education:
+  - school: "University of New Haven — Tagliatela College of Engineering"
+    degree: "MS Data Science"
+    dates: "2024 - May 2026"
+    bullets:
+      - "Dean's Scholarship recipient for academic excellence"
+      - "Coursework: Machine Learning, Deep Learning, NLP, Big Data, Data Visualization"
+      - "Research Assistant under Dr. Moin Bhuiyan — LLM-based IDS research"
+      - "Published: AI-Based IDS Review — 2025 TRON Symposium"
+  - school: "Chalapathi Institute of Engineering & Technology"
+    degree: "BTech Computer Science and Engineering"
+    dates: "2020 - 2024"
+    bullets:
+      - "Graduated with honors in Computer Science"
