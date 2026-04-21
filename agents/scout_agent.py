@@ -55,11 +55,25 @@ def run_scout(config: dict, roles: list, location: str = "Remote",
     all_jobs = []
 
     # ── Primary: Adzuna (country-native API) ─────────────────
+    adzuna_jobs = []
     for role in roles:
         log.info(f"Fetching Adzuna [{country}] for '{role}'...")
-        adzuna_jobs = fetch_adzuna(role, country=country, pages=3)
-        all_jobs += adzuna_jobs
-    log.info(f"Adzuna total: {len(all_jobs)}")
+        adzuna_jobs += fetch_adzuna(role, country=country, pages=3)
+    all_jobs += adzuna_jobs
+    log.info(f"Adzuna total: {len(adzuna_jobs)}")
+
+    if not adzuna_jobs:
+        # Adzuna unavailable — fall back to DB-filtered results for this country
+        log.warning(f"Adzuna returned 0 jobs. Falling back to DB filter for country='{country}'")
+        from database.mysql_db import get_all_jobs as db_get_jobs
+        db_jobs, _ = db_get_jobs(limit=50, location=country)
+        # Convert DB schema (company) back to scout schema (org)
+        for j in db_jobs:
+            j.setdefault("org", j.pop("company", ""))
+            j.setdefault("fit_score", 0)
+            j.setdefault("freshness_score", 5)
+        all_jobs += db_jobs
+        log.info(f"DB fallback: {len(db_jobs)} jobs for country='{country}'")
 
     # ── Secondary: Remotive (worldwide remote) ────────────────
     remotive_start = len(all_jobs)
@@ -69,23 +83,26 @@ def run_scout(config: dict, roles: list, location: str = "Remote",
     log.info(f"Remotive: {len(all_jobs) - remotive_start} jobs")
 
     # ── Supplemental: location-aware sources ─────────────────
+    # Use country as the location signal for these sources
+    loc_hint = location if location.lower() not in ("remote", "anywhere", "") else country
     for role in roles:
-        log.info(f"Fetching LinkedIn for '{role}'...")
-        all_jobs += fetch_linkedin(role, location, limit=10)
+        log.info(f"Fetching LinkedIn for '{role}' [{loc_hint}]...")
+        all_jobs += fetch_linkedin(role, loc_hint, limit=10)
         log.info(f"Fetching Jobicy for '{role}'...")
-        all_jobs += fetch_jobicy(role, limit=10, location=location)
+        all_jobs += fetch_jobicy(role, limit=10, location=country)
         log.info(f"Fetching TheMuse for '{role}'...")
-        all_jobs += fetch_themuse(role, limit=10, location=location)
+        all_jobs += fetch_themuse(role, limit=10, location=country)
 
-    # ── Greenhouse / Lever (config-defined orgs) ─────────────
-    gh_orgs = sources.get("greenhouse", [])
-    if gh_orgs:
-        log.info("Fetching Greenhouse...")
-        all_jobs += fetch_all_greenhouse(gh_orgs)
-    lv_orgs = sources.get("lever", [])
-    if lv_orgs:
-        log.info("Fetching Lever...")
-        all_jobs += fetch_all_lever(lv_orgs)
+    # ── Greenhouse / Lever only when country is USA or not specified ──
+    if country.lower() in ("usa", "united states", "remote", ""):
+        gh_orgs = sources.get("greenhouse", [])
+        if gh_orgs:
+            log.info("Fetching Greenhouse...")
+            all_jobs += fetch_all_greenhouse(gh_orgs)
+        lv_orgs = sources.get("lever", [])
+        if lv_orgs:
+            log.info("Fetching Lever...")
+            all_jobs += fetch_all_lever(lv_orgs)
 
     log.info(f"Total fetched: {len(all_jobs)}")
 

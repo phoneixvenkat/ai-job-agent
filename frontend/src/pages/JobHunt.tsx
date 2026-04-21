@@ -6,6 +6,13 @@ const card = (style = {}) => ({ background: 'rgba(255,255,255,0.04)', border: '1
 
 const COUNTRIES = ["India","Australia","Germany","UK","USA","Canada","Singapore","UAE","Netherlands","Remote"];
 
+// Default city hint shown in location field when country changes
+const COUNTRY_LOCATION: Record<string, string> = {
+  India: "Bengaluru", Australia: "Sydney", Germany: "Berlin", UK: "London",
+  USA: "New York", Canada: "Toronto", Singapore: "Singapore", UAE: "Dubai",
+  Netherlands: "Amsterdam", Remote: "Remote",
+};
+
 export default function JobHunt() {
   const [role, setRole]         = useState('Data Scientist');
   const [location, setLoc]      = useState('Remote');
@@ -84,7 +91,7 @@ export default function JobHunt() {
             <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, pointerEvents: 'none' }}>🌍</span>
             <select
               value={country}
-              onChange={e => setCountry(e.target.value)}
+              onChange={e => { setCountry(e.target.value); setLoc(COUNTRY_LOCATION[e.target.value] || e.target.value); }}
               style={{ padding: '12px 12px 12px 30px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none', cursor: 'pointer', appearance: 'none', minWidth: 130 }}
             >
               {COUNTRIES.map(c => <option key={c} value={c} style={{ background: '#1a1f2e' }}>{c}</option>)}
