@@ -410,6 +410,22 @@ def get_adaptive_patterns() -> list:
         log.error(f"Get patterns error: {e}")
         return []
 
+def get_jobs_count() -> int:
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM jobs")
+        count = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        return count
+    except Error as e:
+        log.error(f"get_jobs_count error: {e}")
+        return 0
+
+
 def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
     """Return (jobs_list, total_count) from jobs table."""
     conn = get_connection()
@@ -421,7 +437,8 @@ def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
         total = cursor.fetchone()["c"]
         cursor.execute("""
             SELECT id, title, org AS company, location, source, url,
-                   fit_score AS match_score, status, created_at
+                   fit_score AS match_score, status, created_at,
+                   description
             FROM jobs
             ORDER BY fit_score DESC, created_at DESC
             LIMIT %s OFFSET %s
