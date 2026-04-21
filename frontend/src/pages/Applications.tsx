@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const API = 'http://127.0.0.1:8000';
+const API = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
 const statusStyle: any = {
   applied:   { bg: 'rgba(37,99,235,0.15)',   color: '#60A5FA'  },

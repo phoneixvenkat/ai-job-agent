@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-const API = 'http://127.0.0.1:8000';
+const API = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 const card = (style = {}) => ({ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 18, ...style });
 const COLORS = ['#2563EB', '#06B6D4', '#10B981', '#F59E0B', '#F43F5E'];
 const TooltipStyle = { background: 'rgba(6,11,24,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: 12 };
