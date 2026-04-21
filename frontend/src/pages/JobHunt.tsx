@@ -4,9 +4,12 @@ import axios from 'axios';
 const API = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 const card = (style = {}) => ({ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 18, ...style });
 
+const COUNTRIES = ["India","Australia","Germany","UK","USA","Canada","Singapore","UAE","Netherlands","Remote"];
+
 export default function JobHunt() {
   const [role, setRole]         = useState('Data Scientist');
   const [location, setLoc]      = useState('Remote');
+  const [country, setCountry]   = useState('India');
   const [jobs, setJobs]         = useState<any[]>([]);
   const [loading, setLoading]   = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
@@ -20,7 +23,7 @@ export default function JobHunt() {
     setSelected([]);
     try {
       const r = await axios.post(`${API}/api/jobs/search`, {
-        roles: [role], location, limit: 20, use_llm: useLLM
+        roles: [role], location, country: country.toLowerCase(), limit: 20, use_llm: useLLM
       });
       setJobs(r.data.jobs || []);
     } catch (e: any) {
@@ -73,9 +76,19 @@ export default function JobHunt() {
               value={location}
               onChange={e => setLoc(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') search(); }}
-              placeholder="Location e.g. Remote"
+              placeholder="City e.g. Bengaluru"
               style={{ width: '100%', padding: '12px 12px 12px 36px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
             />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, pointerEvents: 'none' }}>🌍</span>
+            <select
+              value={country}
+              onChange={e => setCountry(e.target.value)}
+              style={{ padding: '12px 12px 12px 30px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none', cursor: 'pointer', appearance: 'none', minWidth: 130 }}
+            >
+              {COUNTRIES.map(c => <option key={c} value={c} style={{ background: '#1a1f2e' }}>{c}</option>)}
+            </select>
           </div>
           <button
             onClick={search}

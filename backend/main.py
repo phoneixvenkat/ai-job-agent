@@ -117,6 +117,7 @@ async def upload_resume(file: UploadFile = File(...)):
 class SearchRequest(BaseModel):
     roles:    list
     location: Optional[str] = "Remote"
+    country:  Optional[str] = "india"
     limit:    Optional[int] = 20
     use_llm:  Optional[bool] = False
 
@@ -127,7 +128,7 @@ def search_jobs(req: SearchRequest):
         raise HTTPException(status_code=400, detail="Upload your resume first")
 
     cfg    = yaml.safe_load(open(ROOT / "config.yaml", "r", encoding="utf-8"))
-    result = run_scout(cfg, req.roles, req.location)
+    result = run_scout(cfg, req.roles, req.location, country=req.country or "india")
     jobs   = result["jobs"]
 
     dup_result = run_duplicate_agents(jobs)
@@ -156,8 +157,9 @@ def search_jobs(req: SearchRequest):
         "jobs":               analyzed,
         "total":              result["total"],
         "matched":            result["matched"],
+        "country":            result.get("country", req.country),
         "duplicates_removed": dup_result["total_removed"],
-        "clean_count":        dup_result["clean_count"]
+        "clean_count":        dup_result["clean_count"],
     }
 
 
