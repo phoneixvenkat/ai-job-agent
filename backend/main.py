@@ -12,8 +12,9 @@ import yaml
 from database.mysql_db import (
     init_database, log_application, get_all_applications,
     update_application_status, get_stats, check_duplicate, save_job,
-    get_all_jobs, get_followup_applications,
+    get_all_jobs, get_followup_applications, get_jobs_count, save_jobs_to_db,
 )
+import database.mysql_db as mysql_db
 from agents.scout_agent      import run_scout
 from agents.analyst_agent    import run_analyst
 from agents.duplicate_agent  import run_duplicate_agents
@@ -152,9 +153,20 @@ def search_jobs(req: SearchRequest):
     }
 
 
+def _explain_match(job: dict) -> dict:
+    score = job.get("match_score", 0) or 0
+    return {
+        "match_score":     score,
+        "recommendation":  "APPLY"  if score >= 75 else "REVIEW" if score >= 50 else "SKIP",
+        "confidence":      "HIGH"   if score >= 80 else "MEDIUM" if score >= 60 else "LOW",
+    }
+
+
 @app.get("/api/jobs")
 def get_jobs(limit: int = 50, offset: int = 0):
     jobs, total = get_all_jobs(limit=limit, offset=offset)
+    for job in jobs:
+        job["explain"] = _explain_match(job)
     return {"success": True, "data": {"jobs": jobs, "total": total}, "error": None}
 
 
@@ -459,3 +471,51 @@ def login(data: dict):
     if data.get("username") and data.get("password"):
         return {"success": True, "data": {"token": "demo-token", "user": data["username"]}, "error": None}
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+# ── Summary ──────────────────────────────────────────────────
+@app.get("/api/summary")
+def get_summary():
+    apps        = mysql_db.get_all_applications()
+    jobs_count  = mysql_db.get_jobs_count()
+    statuses    = [a.get("status", "") for a in apps]
+    return {
+        "success": True,
+        "data": {
+            "total_jobs":          jobs_count,
+            "total_applications":  len(apps),
+            "interviews":          statuses.count("interview"),
+            "offers":              statuses.count("offer"),
+            "rejections":          statuses.count("rejected"),
+            "pending":             statuses.count("applied"),
+            "follow_ups_needed":   sum(1 for a in apps if a.get("follow_up_needed")),
+        },
+        "error": None,
+    }
+
+
+# ── Demo ─────────────────────────────────────────────────────
+@app.post("/api/demo/run")
+def run_demo():
+    sample_jobs = [
+        {"title": "ML Engineer",     "org": "Google",  "location": "Remote", "description": "Python ML role",       "source": "demo", "url": "https://demo.com/job/1", "fit_score": 92},
+        {"title": "Data Scientist",  "org": "Stripe",  "location": "NYC",    "description": "Data analysis role",   "source": "demo", "url": "https://demo.com/job/2", "fit_score": 85},
+        {"title": "AI Engineer",     "org": "OpenAI",  "location": "SF",     "description": "LLM engineering role", "source": "demo", "url": "https://demo.com/job/3", "fit_score": 78},
+    ]
+    saved, skipped = mysql_db.save_jobs_to_db(sample_jobs)
+    # Also add a demo application if none exist
+    apps = mysql_db.get_all_applications()
+    app_added = 0
+    if len(apps) == 0:
+        mysql_db.log_application(sample_jobs[0], "resume_demo.pdf", "cover_demo.pdf", "applied", "Demo application")
+        app_added = 1
+    return {
+        "success": True,
+        "data": {
+            "jobs_added":   saved,
+            "jobs_skipped": skipped,
+            "apps_added":   app_added,
+            "message":      "Demo data loaded. Check /api/jobs and /api/summary.",
+        },
+        "error": None,
+    }
