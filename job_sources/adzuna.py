@@ -19,13 +19,13 @@ COUNTRY_CODES = {
     "remote":        "gb",
 }
 
-APP_ID  = os.environ.get("ADZUNA_APP_ID",  "")
-APP_KEY = os.environ.get("ADZUNA_APP_KEY", "")
-
-
 def fetch_adzuna(keyword: str, country: str = "india", pages: int = 3) -> list:
-    if not APP_ID or not APP_KEY:
-        log.warning("Adzuna API keys not set (ADZUNA_APP_ID / ADZUNA_APP_KEY) — skipping")
+    # Read at call time so load_dotenv() in the app has already run
+    app_id  = os.environ.get("ADZUNA_APP_ID",  "")
+    app_key = os.environ.get("ADZUNA_APP_KEY", "")
+
+    if not app_id or not app_key or app_id == "your_app_id_here":
+        log.warning("Adzuna API keys not configured — set ADZUNA_APP_ID + ADZUNA_APP_KEY in .env")
         return []
 
     cc   = COUNTRY_CODES.get(country.lower(), "in")
@@ -35,8 +35,8 @@ def fetch_adzuna(keyword: str, country: str = "india", pages: int = 3) -> list:
         try:
             url    = f"https://api.adzuna.com/v1/api/jobs/{cc}/search/{page}"
             params = {
-                "app_id":           APP_ID,
-                "app_key":          APP_KEY,
+                "app_id":           app_id,
+                "app_key":          app_key,
                 "what":             keyword,
                 "results_per_page": 20,
                 "content-type":     "application/json",
