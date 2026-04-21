@@ -75,9 +75,9 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
         log.info(f"Fetching Wellfound for '{role}'...")
         all_jobs += fetch_wellfound(role, limit=10)
         log.info(f"Fetching Jobicy for '{role}'...")
-        all_jobs += fetch_jobicy(role, limit=15)
+        all_jobs += fetch_jobicy(role, limit=15, location=location)
         log.info(f"Fetching TheMuse for '{role}'...")
-        all_jobs += fetch_themuse(role, limit=15)
+        all_jobs += fetch_themuse(role, limit=15, location=location)
 
     log.info(f"\n Total fetched: {len(all_jobs)}")
 
@@ -85,9 +85,22 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
     all_jobs = deduplicate(all_jobs)
     log.info(f" After deduplication: {len(all_jobs)}")
 
-    # Filter
+    # Filter by config rules
     matched = [j for j in all_jobs if match_job(j, required, exclude)]
-    log.info(f" After filtering: {len(matched)}")
+    log.info(f" After config filtering: {len(matched)}")
+
+    # Location filter: keep jobs whose location contains the requested location
+    # or is remote/worldwide, unless location is "Remote" (accept all)
+    if location and location.lower() not in ("remote", "anywhere", ""):
+        loc_lower = location.lower()
+        location_filtered = [
+            j for j in matched
+            if loc_lower in j.get("location", "").lower()
+            or "remote" in j.get("location", "").lower()
+            or j.get("location", "").lower() in ("", "worldwide", "global")
+        ]
+        log.info(f" After location filter '{location}': {len(location_filtered)}")
+        matched = location_filtered if location_filtered else matched
 
     # Add freshness score
     for job in matched:
