@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import pdfplumber
@@ -272,7 +273,18 @@ def scan_emails(req: EmailRequest):
 def excel_report():
     from agents.tracker_agent import generate_excel_report
     path = generate_excel_report()
-    return {"path": path, "message": "Report generated"}
+    return FileResponse(
+        path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=job_report.xlsx"},
+    )
+
+
+@app.get("/api/report/json")
+def report_json():
+    from database.mysql_db import get_applications_for_report
+    apps = get_applications_for_report()
+    return {"success": True, "data": apps, "count": len(apps)}
 
 
 # ── Adaptive Patterns ──────────────────────────────────────
@@ -384,3 +396,66 @@ def dry_run(req: SearchRequest):
         "matched": result["matched"],
         "clean":   dup["clean_count"]
     }
+
+
+# ── Email Results ────────────────────────────────────────────
+@app.get("/api/email/results")
+def email_results():
+    from database.mysql_db import get_connection, _serialize
+    conn = get_connection()
+    if not conn:
+        return {"success": True, "data": [], "count": 0}
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT e.message_id, e.email_subject AS subject,
+                   e.classification, e.confidence,
+                   e.email_from AS sender,
+                   a.org AS company, a.title AS job_title,
+                   a.applied_at, e.detected_at AS processed_at
+            FROM email_log e
+            LEFT JOIN applications a ON e.application_id = a.id
+            ORDER BY e.detected_at DESC
+            LIMIT 100
+        """)
+        rows = [_serialize(r) for r in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return {"success": True, "data": rows, "count": len(rows)}
+    except Exception:
+        return {"success": True, "data": [], "count": 0}
+
+
+# ── Debug: per-source job fetch ──────────────────────────────
+@app.get("/api/debug/jobs-fetch")
+def debug_jobs_fetch():
+    from job_sources.remotive   import fetch_remotive
+    from job_sources.jobicy     import fetch_jobicy
+    from job_sources.themuse    import fetch_themuse
+    from job_sources.linkedin   import fetch_linkedin
+    from job_sources.indeed_rss import fetch_indeed_rss
+    from job_sources.wellfound  import fetch_wellfound
+    role    = "data scientist"
+    results = []
+    for name, fn, kwargs in [
+        ("Remotive",   fetch_remotive,   {"role": role, "limit": 5}),
+        ("Jobicy",     fetch_jobicy,     {"role": role, "limit": 5}),
+        ("TheMuse",    fetch_themuse,    {"role": role, "limit": 5}),
+        ("LinkedIn",   fetch_linkedin,   {"role": role, "location": "Remote", "limit": 5}),
+        ("Indeed RSS", fetch_indeed_rss, {"role": role, "location": "Remote", "limit": 5}),
+        ("Wellfound",  fetch_wellfound,  {"role": role, "limit": 5}),
+    ]:
+        try:
+            jobs  = fn(**kwargs)
+            results.append({"source": name, "count": len(jobs), "error": None})
+        except Exception as e:
+            results.append({"source": name, "count": 0, "error": str(e)})
+    return {"results": results}
+
+
+# ── Auth ─────────────────────────────────────────────────────
+@app.post("/api/auth/login")
+def login(data: dict):
+    if data.get("username") and data.get("password"):
+        return {"success": True, "data": {"token": "demo-token", "user": data["username"]}, "error": None}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
