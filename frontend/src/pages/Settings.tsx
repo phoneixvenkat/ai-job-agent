@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
-const API = 'http://127.0.0.1:8000';
+const API = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 const card = (style = {}) => ({ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: 20, marginBottom: 16, ...style });
 const inputStyle = { width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none', marginTop: 6 };
 const labelStyle = { fontSize: 12, color: 'rgba(255,255,255,0.5)' };
