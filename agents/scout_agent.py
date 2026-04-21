@@ -6,6 +6,8 @@ from job_sources.remotive import fetch_remotive
 from job_sources.wellfound import fetch_wellfound
 from job_sources.indeed_rss import fetch_indeed_rss
 from job_sources.linkedin import fetch_linkedin
+from job_sources.jobicy import fetch_jobicy
+from job_sources.themuse import fetch_themuse
 from database.mysql_db import save_jobs_to_db
 from backend.utils.logger import get_logger
 log = get_logger('scout')
@@ -53,25 +55,29 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
     # Greenhouse
     gh_orgs = sources.get("greenhouse", [])
     if gh_orgs:
-        print("Fetching Greenhouse...")
+        log.info("Fetching Greenhouse...")
         all_jobs += fetch_all_greenhouse(gh_orgs)
 
     # Lever
     lv_orgs = sources.get("lever", [])
     if lv_orgs:
-        print("Fetching Lever...")
+        log.info("Fetching Lever...")
         all_jobs += fetch_all_lever(lv_orgs)
 
-    # Remotive, LinkedIn, Indeed, Wellfound
+    # Remotive, LinkedIn, Indeed, Wellfound, Jobicy, TheMuse
     for role in roles:
-        print(f"Fetching Remotive for '{role}'...")
+        log.info(f"Fetching Remotive for '{role}'...")
         all_jobs += fetch_remotive(role, limit=15)
-        print(f"Fetching LinkedIn for '{role}'...")
+        log.info(f"Fetching LinkedIn for '{role}'...")
         all_jobs += fetch_linkedin(role, location, limit=15)
-        print(f"Fetching Indeed for '{role}'...")
+        log.info(f"Fetching Indeed for '{role}'...")
         all_jobs += fetch_indeed_rss(role, location, limit=15)
-        print(f"Fetching Wellfound for '{role}'...")
+        log.info(f"Fetching Wellfound for '{role}'...")
         all_jobs += fetch_wellfound(role, limit=10)
+        log.info(f"Fetching Jobicy for '{role}'...")
+        all_jobs += fetch_jobicy(role, limit=15)
+        log.info(f"Fetching TheMuse for '{role}'...")
+        all_jobs += fetch_themuse(role, limit=15)
 
     log.info(f"\n Total fetched: {len(all_jobs)}")
 

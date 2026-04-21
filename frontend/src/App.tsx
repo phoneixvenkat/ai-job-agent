@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, Outlet, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import JobHunt from './pages/JobHunt';
 import Review from './pages/Review';
@@ -211,15 +212,21 @@ function AppLayout() {
   );
 }
 
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('token');
+  return token ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <Router>
       <Routes>
         {/* Landing page at root */}
         <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Dashboard app nested under /app */}
-        <Route path="/app" element={<AppLayout />}>
+        <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
           <Route index element={<Dashboard />} />
           <Route path="resume"       element={<ResumeUpload />} />
           <Route path="jobs"         element={<JobHunt />}      />
