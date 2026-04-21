@@ -1,5 +1,6 @@
 import re
 import hashlib
+from job_sources.adzuna import fetch_adzuna
 from job_sources.greenhouse import fetch_all_greenhouse
 from job_sources.lever import fetch_all_lever
 from job_sources.remotive import fetch_remotive
@@ -42,8 +43,9 @@ def score_freshness(job: dict) -> int:
     if "month" in posted: return 1
     return 5
 
-def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
-    log.info("\n Scout Agent starting...\n")
+def run_scout(config: dict, roles: list, location: str = "Remote",
+              country: str = "india") -> dict:
+    log.info(f"Scout Agent starting — country={country}, roles={roles}")
     filters  = config.get("filters", {})
     sources  = config.get("sources", {})
     required = filters.get("required", [])
@@ -52,74 +54,62 @@ def run_scout(config: dict, roles: list, location: str = "Remote") -> dict:
 
     all_jobs = []
 
-    # Greenhouse
+    # ── Primary: Adzuna (country-native API) ─────────────────
+    for role in roles:
+        log.info(f"Fetching Adzuna [{country}] for '{role}'...")
+        adzuna_jobs = fetch_adzuna(role, country=country, pages=3)
+        all_jobs += adzuna_jobs
+    log.info(f"Adzuna total: {len(all_jobs)}")
+
+    # ── Secondary: Remotive (worldwide remote) ────────────────
+    remotive_start = len(all_jobs)
+    for role in roles:
+        log.info(f"Fetching Remotive for '{role}'...")
+        all_jobs += fetch_remotive(role, limit=15)
+    log.info(f"Remotive: {len(all_jobs) - remotive_start} jobs")
+
+    # ── Supplemental: location-aware sources ─────────────────
+    for role in roles:
+        log.info(f"Fetching LinkedIn for '{role}'...")
+        all_jobs += fetch_linkedin(role, location, limit=10)
+        log.info(f"Fetching Jobicy for '{role}'...")
+        all_jobs += fetch_jobicy(role, limit=10, location=location)
+        log.info(f"Fetching TheMuse for '{role}'...")
+        all_jobs += fetch_themuse(role, limit=10, location=location)
+
+    # ── Greenhouse / Lever (config-defined orgs) ─────────────
     gh_orgs = sources.get("greenhouse", [])
     if gh_orgs:
         log.info("Fetching Greenhouse...")
         all_jobs += fetch_all_greenhouse(gh_orgs)
-
-    # Lever
     lv_orgs = sources.get("lever", [])
     if lv_orgs:
         log.info("Fetching Lever...")
         all_jobs += fetch_all_lever(lv_orgs)
 
-    # Remotive, LinkedIn, Indeed, Wellfound, Jobicy, TheMuse
-    for role in roles:
-        log.info(f"Fetching Remotive for '{role}'...")
-        all_jobs += fetch_remotive(role, limit=15)
-        log.info(f"Fetching LinkedIn for '{role}'...")
-        all_jobs += fetch_linkedin(role, location, limit=15)
-        log.info(f"Fetching Indeed for '{role}'...")
-        all_jobs += fetch_indeed_rss(role, location, limit=15)
-        log.info(f"Fetching Wellfound for '{role}'...")
-        all_jobs += fetch_wellfound(role, limit=10)
-        log.info(f"Fetching Jobicy for '{role}'...")
-        all_jobs += fetch_jobicy(role, limit=15, location=location)
-        log.info(f"Fetching TheMuse for '{role}'...")
-        all_jobs += fetch_themuse(role, limit=15, location=location)
+    log.info(f"Total fetched: {len(all_jobs)}")
 
-    log.info(f"\n Total fetched: {len(all_jobs)}")
-
-    # Deduplicate
     all_jobs = deduplicate(all_jobs)
-    log.info(f" After deduplication: {len(all_jobs)}")
+    log.info(f"After deduplication: {len(all_jobs)}")
 
-    # Filter by config rules
     matched = [j for j in all_jobs if match_job(j, required, exclude)]
-    log.info(f" After config filtering: {len(matched)}")
+    log.info(f"After config filtering: {len(matched)}")
 
-    # Location filter: keep jobs whose location contains the requested location
-    # or is remote/worldwide, unless location is "Remote" (accept all)
-    if location and location.lower() not in ("remote", "anywhere", ""):
-        loc_lower = location.lower()
-        location_filtered = [
-            j for j in matched
-            if loc_lower in j.get("location", "").lower()
-            or "remote" in j.get("location", "").lower()
-            or j.get("location", "").lower() in ("", "worldwide", "global")
-        ]
-        log.info(f" After location filter '{location}': {len(location_filtered)}")
-        matched = location_filtered if location_filtered else matched
-
-    # Add freshness score
     for job in matched:
         job["freshness_score"] = score_freshness(job)
 
-    # Sort by freshness
     matched.sort(key=lambda x: x["freshness_score"], reverse=True)
 
-    # Persist to MySQL (INSERT IGNORE skips duplicates)
     saved, skipped = save_jobs_to_db(matched[:top_n])
-    log.info(f"[OK] Persisted {saved} new jobs to DB ({skipped} duplicates skipped)")
-
-    log.info(f"\n Top {min(len(matched), top_n)} jobs ready\n")
+    log.info(f"[OK] Persisted {saved} new jobs ({skipped} duplicates skipped) | "
+             f"Country: {country}, Adzuna: {len(adzuna_jobs)}, Total: {len(all_jobs)}")
 
     return {
-        "status":    "success",
-        "total":     len(all_jobs),
-        "matched":   len(matched),
-        "jobs":      matched[:top_n]
+        "status":  "success",
+        "total":   len(all_jobs),
+        "matched": len(matched),
+        "jobs":    matched[:top_n],
+        "country": country,
     }
 
 if __name__ == "__main__":
