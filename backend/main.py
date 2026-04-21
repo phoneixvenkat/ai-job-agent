@@ -171,8 +171,8 @@ def _explain_match(job: dict) -> dict:
 
 
 @app.get("/api/jobs")
-def get_jobs(limit: int = 50, offset: int = 0):
-    jobs, total = get_all_jobs(limit=limit, offset=offset)
+def get_jobs(limit: int = 50, offset: int = 0, location: str = ""):
+    jobs, total = get_all_jobs(limit=limit, offset=offset, location=location)
     for job in jobs:
         job["explain"] = _explain_match(job)
     return {"success": True, "data": {"jobs": jobs, "total": total}, "error": None}

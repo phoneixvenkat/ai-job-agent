@@ -426,23 +426,46 @@ def get_jobs_count() -> int:
         return 0
 
 
-def get_all_jobs(limit: int = 50, offset: int = 0) -> tuple:
-    """Return (jobs_list, total_count) from jobs table."""
+def get_all_jobs(limit: int = 50, offset: int = 0, location: str = "") -> tuple:
+    """Return (jobs_list, total_count) from jobs table, optionally filtered by location."""
     conn = get_connection()
     if not conn:
         return [], 0
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT COUNT(*) as c FROM jobs")
-        total = cursor.fetchone()["c"]
-        cursor.execute("""
-            SELECT id, title, org AS company, location, source, url,
-                   fit_score AS match_score, status, created_at,
-                   description
-            FROM jobs
-            ORDER BY fit_score DESC, created_at DESC
-            LIMIT %s OFFSET %s
-        """, (limit, offset))
+        if location and location.lower() not in ("remote", "anywhere", ""):
+            loc_pat = f"%{location}%"
+            # "Remote" only if NOT prefixed with a specific country/region (e.g. exclude "US Remote")
+            cursor.execute(
+                """SELECT COUNT(*) as c FROM jobs
+                   WHERE location LIKE %s
+                      OR location REGEXP '^[Rr]emote'
+                      OR location IN ('Remote','remote','Worldwide','worldwide','Global','global')""",
+                (loc_pat,)
+            )
+            total = cursor.fetchone()["c"]
+            cursor.execute("""
+                SELECT id, title, org AS company, location, source, url,
+                       fit_score AS match_score, status, created_at, description
+                FROM jobs
+                WHERE location LIKE %s
+                   OR location REGEXP '^[Rr]emote'
+                   OR location IN ('Remote','remote','Worldwide','worldwide','Global','global')
+                ORDER BY
+                    CASE WHEN location LIKE %s THEN 0 ELSE 1 END,
+                    fit_score DESC, created_at DESC
+                LIMIT %s OFFSET %s
+            """, (loc_pat, loc_pat, limit, offset))
+        else:
+            cursor.execute("SELECT COUNT(*) as c FROM jobs")
+            total = cursor.fetchone()["c"]
+            cursor.execute("""
+                SELECT id, title, org AS company, location, source, url,
+                       fit_score AS match_score, status, created_at, description
+                FROM jobs
+                ORDER BY fit_score DESC, created_at DESC
+                LIMIT %s OFFSET %s
+            """, (limit, offset))
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
