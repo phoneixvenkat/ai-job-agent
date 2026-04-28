@@ -34,6 +34,8 @@ from backend.routes.analytics    import router as analytics_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_database()
+    from backend.database.connection import init_db
+    init_db()
     yield
 
 
@@ -76,7 +78,10 @@ RESUME_CACHE = ROOT / "data" / "resume_cache.txt"
 resume_store = {"text": "", "filename": ""}
 
 if RESUME_CACHE.exists():
-    resume_store["text"] = RESUME_CACHE.read_text(encoding="utf-8")
+    try:
+        resume_store["text"] = RESUME_CACHE.read_text(encoding="utf-8")
+    except Exception:
+        resume_store["text"] = ""
 
 
 # ── Resume Upload ──────────────────────────────────────────
@@ -186,7 +191,7 @@ class TailorRequest(BaseModel):
     use_llm: Optional[bool] = True
 
 
-@app.post("/api/resume/tailor")
+@app.post("/api/resume/tailor")  # v2: returns full structured resume
 def tailor_resume(req: TailorRequest):
     if not resume_store["text"]:
         raise HTTPException(status_code=400, detail="Upload resume first")
@@ -195,7 +200,13 @@ def tailor_resume(req: TailorRequest):
         "resume_path":  result["resume_path"],
         "cover_path":   result["cover_path"],
         "cover_text":   result["cover_text"],
-        "summary_used": result["summary_used"]
+        "summary_used": result["summary_used"],
+        "name":         result.get("name", ""),
+        "contact":      result.get("contact", ""),
+        "skills":       result.get("skills", []),
+        "experience":   result.get("experience", []),
+        "projects":     result.get("projects", []),
+        "education":    result.get("education", []),
     }
 
 
@@ -396,7 +407,7 @@ class SettingsUpdate(BaseModel):
 
 @app.post("/api/settings")
 def save_settings(req: SettingsUpdate):
-    update = req.dict(exclude_none=True)
+    update = req.model_dump(exclude_none=True)
     _settings_store.update(update)
     return {"success": True, "data": _settings_store, "error": None}
 
@@ -448,31 +459,38 @@ def email_results():
         return {"success": True, "data": [], "count": 0}
 
 
-# ── Debug: per-source job fetch ──────────────────────────────
-@app.get("/api/debug/jobs-fetch")
-def debug_jobs_fetch():
+# ── Debug: per-source health check ───────────────────────────
+@app.get("/api/debug/sources")
+def debug_sources():
     from job_sources.remotive   import fetch_remotive
     from job_sources.jobicy     import fetch_jobicy
-    from job_sources.themuse    import fetch_themuse
-    from job_sources.linkedin   import fetch_linkedin
-    from job_sources.indeed_rss import fetch_indeed_rss
-    from job_sources.wellfound  import fetch_wellfound
-    role    = "data scientist"
-    results = []
-    for name, fn, kwargs in [
-        ("Remotive",   fetch_remotive,   {"role": role, "limit": 5}),
-        ("Jobicy",     fetch_jobicy,     {"role": role, "limit": 5}),
-        ("TheMuse",    fetch_themuse,    {"role": role, "limit": 5}),
-        ("LinkedIn",   fetch_linkedin,   {"role": role, "location": "Remote", "limit": 5}),
-        ("Indeed RSS", fetch_indeed_rss, {"role": role, "location": "Remote", "limit": 5}),
-        ("Wellfound",  fetch_wellfound,  {"role": role, "limit": 5}),
-    ]:
+    from job_sources.arbeitnow  import fetch_arbeitnow
+    from job_sources.himalayas  import fetch_himalayas
+    from job_sources.usajobs    import fetch_usajobs
+    from job_sources.adzuna     import fetch_adzuna
+
+    role    = "python developer"
+    country = "usa"
+    probes  = [
+        ("remotive",   lambda: fetch_remotive(role, limit=3)),
+        ("jobicy",     lambda: fetch_jobicy(role, limit=3, location=country)),
+        ("arbeitnow",  lambda: fetch_arbeitnow(role, country=country, limit=3)),
+        ("himalayas",  lambda: fetch_himalayas(role, limit=3)),
+        ("usajobs",    lambda: fetch_usajobs(role, limit=3)),
+        ("adzuna",     lambda: fetch_adzuna(role, country=country, pages=1)),
+    ]
+    out = {}
+    for name, fn in probes:
         try:
-            jobs  = fn(**kwargs)
-            results.append({"source": name, "count": len(jobs), "error": None})
+            jobs = fn()
+            out[name] = {
+                "status": "ok",
+                "count":  len(jobs),
+                "sample": [j.get("title", "") for j in jobs[:2]],
+            }
         except Exception as e:
-            results.append({"source": name, "count": 0, "error": str(e)})
-    return {"results": results}
+            out[name] = {"status": "error", "count": 0, "sample": [], "error": str(e)}
+    return out
 
 
 # ── Auth ─────────────────────────────────────────────────────

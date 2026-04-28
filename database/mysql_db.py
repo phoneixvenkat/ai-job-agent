@@ -435,12 +435,12 @@ def get_all_jobs(limit: int = 50, offset: int = 0, location: str = "") -> tuple:
         cursor = conn.cursor(dictionary=True)
         if location and location.lower() not in ("remote", "anywhere", ""):
             loc_pat = f"%{location}%"
-            # "Remote" only if NOT prefixed with a specific country/region (e.g. exclude "US Remote")
             cursor.execute(
                 """SELECT COUNT(*) as c FROM jobs
-                   WHERE location LIKE %s
+                   WHERE source != 'demo'
+                     AND (location LIKE %s
                       OR location REGEXP '^[Rr]emote'
-                      OR location IN ('Remote','remote','Worldwide','worldwide','Global','global')""",
+                      OR location IN ('Remote','remote','Worldwide','worldwide','Global','global'))""",
                 (loc_pat,)
             )
             total = cursor.fetchone()["c"]
@@ -448,21 +448,23 @@ def get_all_jobs(limit: int = 50, offset: int = 0, location: str = "") -> tuple:
                 SELECT id, title, org AS company, location, source, url,
                        fit_score AS match_score, status, created_at, description
                 FROM jobs
-                WHERE location LIKE %s
+                WHERE source != 'demo'
+                  AND (location LIKE %s
                    OR location REGEXP '^[Rr]emote'
-                   OR location IN ('Remote','remote','Worldwide','worldwide','Global','global')
+                   OR location IN ('Remote','remote','Worldwide','worldwide','Global','global'))
                 ORDER BY
                     CASE WHEN location LIKE %s THEN 0 ELSE 1 END,
                     fit_score DESC, created_at DESC
                 LIMIT %s OFFSET %s
             """, (loc_pat, loc_pat, limit, offset))
         else:
-            cursor.execute("SELECT COUNT(*) as c FROM jobs")
+            cursor.execute("SELECT COUNT(*) as c FROM jobs WHERE source != 'demo'")
             total = cursor.fetchone()["c"]
             cursor.execute("""
                 SELECT id, title, org AS company, location, source, url,
                        fit_score AS match_score, status, created_at, description
                 FROM jobs
+                WHERE source != 'demo'
                 ORDER BY fit_score DESC, created_at DESC
                 LIMIT %s OFFSET %s
             """, (limit, offset))

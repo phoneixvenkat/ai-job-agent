@@ -4,25 +4,20 @@ from langchain_groq import ChatGroq
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
 from backend.utils.logger import get_logger
 log = get_logger('analyst')
 
-
-GROQ_API_KEY = "your_groq_api_key_here"
-llm = ChatGroq(
-    model="llama3-8b-8192",
-    api_key=GROQ_API_KEY,
-    temperature=0
-)
-
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+    return _llm
 
 def calculate_fit_score(resume_text: str, job_description: str) -> float:
     try:
@@ -76,10 +71,10 @@ Description (first 800 chars): {job_description[:800]}
 
 Give only the bullet points, no intro text."""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         return response.content.strip()
     except:
-        return "JD Decoder unavailable — Ollama not running"
+        return "JD Decoder unavailable — check GROQ_API_KEY"
 
 def estimate_salary(job_title: str, location: str) -> dict:
     salary_map = {
