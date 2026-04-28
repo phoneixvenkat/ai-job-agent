@@ -8,7 +8,13 @@ from backend.utils.logger import get_logger
 log = get_logger('llm_matcher')
 
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+    return _llm
 
 def llm_match_job(resume_text: str, job: dict) -> dict:
     title       = job.get("title", "")
@@ -39,7 +45,7 @@ Provide your analysis in this EXACT JSON format:
 Return ONLY the JSON, no other text."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         text     = response.content.strip()
         text     = re.sub(r'```json|```', '', text).strip()
         result   = json.loads(text)

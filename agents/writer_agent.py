@@ -18,7 +18,13 @@ OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
 
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+    return _llm
 
 def load_yaml(path):
     return yaml.safe_load(open(path, "r", encoding="utf-8"))
@@ -75,7 +81,7 @@ Example format:
     "bullets": ["Built ML pipeline improving accuracy by 15%", "Processed 1M+ records using PySpark"]}}
 ]"""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         text = response.content.strip()
         start = text.find('[')
         end   = text.rfind(']') + 1
@@ -98,7 +104,7 @@ Original Summary: {base_summary}
 
 Return only the rewritten summary, nothing else."""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         return response.content.strip()
     except:
         return base_summary
@@ -122,7 +128,7 @@ Instructions:
 - Do NOT use placeholders like [Your Name]
 - Return only the letter text"""
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         return response.content.strip()
     except:
         return f"Dear Hiring Team at {job['org']},\n\nI am excited to apply for the {job['title']} position.\n\nThank you,\n{base['name']}"

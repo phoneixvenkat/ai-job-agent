@@ -8,7 +8,13 @@ from backend.utils.logger import get_logger
 log = get_logger('rejection')
 
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+    return _llm
 
 def handle_rejection(app_id: int, job: dict, resume_text: str) -> dict:
     log.info(f"\n Rejection Handler: {job.get('title')} at {job.get('org')}")
@@ -29,7 +35,7 @@ Provide:
 Be direct and constructive."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         analysis = response.content.strip()
     except Exception as e:
         log.error(f"LLM call failed: {e}")
@@ -61,7 +67,7 @@ Generate:
 Format as plain text with clear sections."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         prep     = response.content.strip()
     except Exception as e:
         log.error(f"LLM call failed: {e}")
@@ -95,7 +101,7 @@ Description: {job.get('description', '')[:500]}
 What key information is missing? List 3 specific questions to research."""
 
     try:
-        response  = llm.invoke([HumanMessage(content=prompt)])
+        response  = _get_llm().invoke([HumanMessage(content=prompt)])
         questions = response.content.strip()
     except Exception as e:
         log.error(f"LLM call failed: {e}")

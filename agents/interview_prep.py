@@ -9,7 +9,13 @@ from backend.utils.logger import get_logger
 log = get_logger("interview")
 
 load_dotenv()
-llm  = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+    return _llm
 ROOT = pathlib.Path(__file__).parent.parent
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
@@ -32,7 +38,7 @@ Generate:
 Be specific and actionable."""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         content  = response.content.strip()
     except Exception as e:
         log.error(f"Interview prep LLM failed: {e}")

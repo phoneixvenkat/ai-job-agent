@@ -9,7 +9,13 @@ from backend.utils.logger import get_logger
 log = get_logger('followup')
 
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
+    return _llm
 
 def get_pending_followups() -> list:
     conn = get_connection()
@@ -53,7 +59,7 @@ BODY:
 <body>"""
 
     try:
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = _get_llm().invoke([HumanMessage(content=prompt)])
         text     = response.content.strip()
         lines    = text.split('\n')
         subject  = ""
