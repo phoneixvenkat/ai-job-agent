@@ -1,7 +1,10 @@
-from langchain_ollama import ChatOllama
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
 
 def tailor_resume(resume_text: str, job_title: str, job_description: str, company: str) -> str:
     prompt = f"""You are an expert resume writer. Rewrite the following resume to better match the job description.

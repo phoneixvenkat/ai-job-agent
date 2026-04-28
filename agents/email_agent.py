@@ -154,7 +154,8 @@ def _find_matching_application(from_addr: str, subject: str) -> dict | None:
 
 
 def find_linkedin_profile(sender_name: str, company: str) -> str:
-    q = f"{sender_name} {company} LinkedIn".replace(" ", "%20")
+    from urllib.parse import quote_plus
+    q = quote_plus(f"{sender_name} {company}")
     return f"https://www.linkedin.com/search/results/people/?keywords={q}"
 
 

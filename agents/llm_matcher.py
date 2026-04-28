@@ -1,25 +1,14 @@
 import os
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
-
-GROQ_API_KEY = "your_groq_api_key_here"
-llm = ChatGroq(
-    model="llama3-8b-8192",
-    api_key=GROQ_API_KEY,
-    temperature=0
-)
 import json
 import re
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 from backend.utils.logger import get_logger
 log = get_logger('llm_matcher')
 
-
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 def llm_match_job(resume_text: str, job: dict) -> dict:
     title       = job.get("title", "")
@@ -63,7 +52,7 @@ Return ONLY the JSON, no other text."""
             "apply_decision": result.get("apply_decision", "")
         }
     except Exception as e:
-        print(f"LLM matcher error: {e}")
+        log.error(f"LLM matcher error: {e}")
         return {
             "llm_score":     50.0,
             "recommendation": "CONSIDER",

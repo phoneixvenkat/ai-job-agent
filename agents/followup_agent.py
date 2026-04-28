@@ -1,4 +1,6 @@
-from langchain_ollama import ChatOllama
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from database.mysql_db import get_connection
 from mysql.connector import Error
@@ -6,8 +8,8 @@ import datetime
 from backend.utils.logger import get_logger
 log = get_logger('followup')
 
-
-llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
+load_dotenv()
+llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
 
 def get_pending_followups() -> list:
     conn = get_connection()
@@ -72,6 +74,7 @@ BODY:
             "body":    body.strip() or f"Dear Hiring Team,\n\nI wanted to follow up on my application for the {app['title']} position at {app['org']}.\n\nBest regards,\nVenkatasaikumar Erla"
         }
     except Exception as e:
+        log.error(f"Follow-up email generation failed: {e}")
         return {
             "app_id":  app["id"],
             "title":   app["title"],

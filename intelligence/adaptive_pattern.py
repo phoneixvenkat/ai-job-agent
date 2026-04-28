@@ -34,11 +34,11 @@ def get_recommendations() -> dict:
         rate  = p["success_rate"]
         count = p["total_count"]
 
-        if ptype == "source" and rate > 0.1:
+        if ptype == "source" and rate > 0 and count >= 1:
             recs["best_sources"].append({"source": val, "rate": rate, "count": count})
-        elif ptype == "job_title" and rate > 0.1:
+        elif ptype == "job_title" and rate > 0 and count >= 1:
             recs["best_titles"].append({"title": val, "rate": rate, "count": count})
-        elif ptype == "score_range" and rate > 0.1:
+        elif ptype == "score_range" and rate > 0 and count >= 1:
             recs["best_score_range"] = val
 
     if recs["best_sources"]:

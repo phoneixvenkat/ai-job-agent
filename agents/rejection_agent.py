@@ -1,25 +1,14 @@
 import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 from database.mysql_db import update_application_status
 from intelligence.adaptive_pattern import learn_from_application
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
 from backend.utils.logger import get_logger
 log = get_logger('rejection')
 
-
-GROQ_API_KEY = "your_groq_api_key_here"
-llm = ChatGroq(
-    model="llama3-8b-8192",
-    api_key=GROQ_API_KEY,
-    temperature=0
-)
-
 load_dotenv()
-llm = ChatGroq(model=os.getenv("GROQ_MODEL","llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
+llm = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0)
 
 def handle_rejection(app_id: int, job: dict, resume_text: str) -> dict:
     log.info(f"\n Rejection Handler: {job.get('title')} at {job.get('org')}")
@@ -42,7 +31,8 @@ Be direct and constructive."""
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
         analysis = response.content.strip()
-    except:
+    except Exception as e:
+        log.error(f"LLM call failed: {e}")
         analysis = "Focus on the missing skills identified in your fit score analysis."
 
     return {
@@ -73,7 +63,8 @@ Format as plain text with clear sections."""
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
         prep     = response.content.strip()
-    except:
+    except Exception as e:
+        log.error(f"LLM call failed: {e}")
         prep = f"Research {job.get('org')} thoroughly and prepare examples of your ML/DS projects."
 
     return {
@@ -106,7 +97,8 @@ What key information is missing? List 3 specific questions to research."""
     try:
         response  = llm.invoke([HumanMessage(content=prompt)])
         questions = response.content.strip()
-    except:
+    except Exception as e:
+        log.error(f"LLM call failed: {e}")
         questions = "Research salary range, team size, and tech stack before applying."
 
     return {

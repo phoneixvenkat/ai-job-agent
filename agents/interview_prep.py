@@ -1,20 +1,19 @@
-from fpdf2 import FPDF
+import os
 import pathlib
 import datetime
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 from backend.utils.logger import get_logger
 
-log  = get_logger("interview")
-_llm = None
+log = get_logger("interview")
 
-def _get_llm():
-    global _llm
-    if _llm is None:
-        from langchain_ollama import ChatOllama
-        _llm = ChatOllama(model="llama3", base_url="http://localhost:11434", temperature=0.3)
-    return _llm
+load_dotenv()
+llm  = ChatGroq(model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"), api_key=os.getenv("GROQ_API_KEY"), temperature=0.3)
 ROOT = pathlib.Path(__file__).parent.parent
 OUT  = ROOT / "out"
 OUT.mkdir(exist_ok=True)
+
 
 def generate_interview_prep(job: dict, resume_text: str) -> dict:
     prompt = f"""Create a comprehensive interview preparation guide.
@@ -33,10 +32,10 @@ Generate:
 Be specific and actionable."""
 
     try:
-        from langchain_core.messages import HumanMessage
-        response = _get_llm().invoke([HumanMessage(content=prompt)])
+        response = llm.invoke([HumanMessage(content=prompt)])
         content  = response.content.strip()
-    except:
+    except Exception as e:
+        log.error(f"Interview prep LLM failed: {e}")
         content = f"""## TECHNICAL QUESTIONS
 1. Describe your experience with machine learning pipelines.
 2. How have you used Python for data analysis?
@@ -60,11 +59,11 @@ Be specific and actionable."""
 3. Research their tech stack
 4. Look up the interviewer on LinkedIn"""
 
-    # Save as PDF
+    # Save as PDF (fpdf2 optional — skip gracefully if not installed)
     ts   = int(datetime.datetime.now().timestamp())
     path = str(OUT / f"interview_prep_{job.get('org','company')}_{ts}.pdf")
-
     try:
+        from fpdf2 import FPDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", "B", 16)
@@ -72,12 +71,11 @@ Be specific and actionable."""
         pdf.set_font("Helvetica", "", 10)
         pdf.cell(0, 8, f"Generated: {datetime.datetime.now().strftime('%B %d, %Y')}", ln=True)
         pdf.ln(5)
-        pdf.set_font("Helvetica", "", 10)
         for line in content.split('\n'):
             if line.startswith('##'):
                 pdf.set_font("Helvetica", "B", 12)
                 pdf.ln(3)
-                pdf.cell(0, 8, line.replace('##','').strip(), ln=True)
+                pdf.cell(0, 8, line.replace('##', '').strip(), ln=True)
                 pdf.set_font("Helvetica", "", 10)
             else:
                 pdf.multi_cell(0, 6, line)
@@ -87,7 +85,7 @@ Be specific and actionable."""
         path = ""
 
     return {
-        "job":     job,
-        "content": content,
-        "pdf_path": path
+        "job":      job,
+        "content":  content,
+        "pdf_path": path,
     }

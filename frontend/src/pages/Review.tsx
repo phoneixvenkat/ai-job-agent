@@ -29,7 +29,7 @@ export default function Review() {
   useEffect(() => {
     if (job) generateDocs();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, jobs.length]);
 
   const generateDocs = async () => {
     if (!job) return;
@@ -42,7 +42,11 @@ export default function Review() {
       setTailored({
         cover_text: `Dear Hiring Team at ${job.org},\n\nI am excited to apply for the ${job.title} position. My background in data science and machine learning makes me a strong candidate for this role.\n\nThank you for your consideration.\n\nBest regards,\nVenkatasaikumar Erla`,
         resume_path: '',
-        cover_path: ''
+        cover_path: '',
+        summary_used: '',
+        skills: [],
+        experience: [],
+        projects: [],
       });
     }
     setGenerating(false);
@@ -183,20 +187,74 @@ export default function Review() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
 
-          {/* Resume Preview */}
+          {/* Resume Preview — fully dynamic */}
           <div style={card()}>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📄 RESUME PREVIEW</div>
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#fff' }}>VENKATASAIKUMAR ERLA</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 12, fontSize: 11 }}>
-                West Haven, CT | venkatasaikumarerla@gmail.com | +1-203-868-6085
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, overflowY: 'auto', maxHeight: 440 }}>
+
+              {/* Name & Contact */}
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: '#fff' }}>
+                {tailored?.name || 'VENKATASAIKUMAR ERLA'}
               </div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 12, fontSize: 11 }}>
+                {tailored?.contact || 'West Haven, CT | venkatasaikumarerla@gmail.com | +1-203-868-6085'}
+              </div>
+
+              {/* Summary */}
               <div style={{ fontWeight: 600, marginBottom: 4, color: '#60A5FA' }}>SUMMARY</div>
               <div style={{ marginBottom: 12 }}>
-                {tailored?.summary_used || `MS Data Science candidate with 3.5 years full stack experience. Skilled in Python, ML, NLP, and LLM-based systems. Tailored for ${job.title} at ${job.org}.`}
+                {tailored?.summary_used || `Targeting ${job.title} at ${job.org}.`}
               </div>
-              <div style={{ fontWeight: 600, marginBottom: 4, color: '#60A5FA' }}>KEY SKILLS</div>
-              <div>Python · TensorFlow · NLP · LangChain · AWS · SQL · Scikit-learn · FastAPI</div>
+
+              {/* Skills */}
+              {tailored?.skills?.length > 0 && (
+                <>
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: '#60A5FA' }}>SKILLS</div>
+                  <div style={{ marginBottom: 12 }}>
+                    {(tailored.skills as string[]).map((s, i) => (
+                      <div key={i} style={{ marginBottom: 2 }}>{s}</div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Experience extracted from uploaded resume */}
+              {tailored?.experience?.length > 0 && (
+                <>
+                  <div style={{ fontWeight: 600, marginBottom: 6, color: '#60A5FA' }}>EXPERIENCE</div>
+                  {(tailored.experience as any[]).map((exp, i) => (
+                    <div key={i} style={{ marginBottom: 10 }}>
+                      <div style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                        {exp.title}{exp.company ? ` — ${exp.company}` : ''}
+                        {exp.dates && (
+                          <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>
+                            {exp.dates}
+                          </span>
+                        )}
+                      </div>
+                      {(exp.bullets as string[])?.map((b, j) => (
+                        <div key={j} style={{ paddingLeft: 12, marginTop: 2, color: 'rgba(255,255,255,0.55)' }}>• {b}</div>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Tailored Projects */}
+              {tailored?.projects?.length > 0 && (
+                <>
+                  <div style={{ fontWeight: 600, marginBottom: 6, color: '#60A5FA' }}>RELEVANT PROJECTS</div>
+                  {(tailored.projects as any[]).map((p, i) => (
+                    <div key={i} style={{ marginBottom: 10 }}>
+                      <div style={{ fontWeight: 600, color: '#e2e8f0' }}>{p.title}</div>
+                      {(p.bullets as string[])?.map((b, j) => (
+                        <div key={j} style={{ paddingLeft: 12, marginTop: 2, color: 'rgba(255,255,255,0.55)' }}>• {b}</div>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              )}
+
             </div>
             {tailored?.resume_path && (
               <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
@@ -208,10 +266,10 @@ export default function Review() {
           {/* Cover Letter Preview */}
           <div style={card()}>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>📝 COVER LETTER</div>
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, minHeight: 200, overflowY: 'auto', maxHeight: 250 }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: 16, fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, overflowY: 'auto', maxHeight: 440 }}>
               {coverLines.map((line: string, i: number) => (
                 <div key={i} style={{ marginBottom: line === '' ? 8 : 2 }}>
-                  {line || '\u00A0'}
+                  {line || ' '}
                 </div>
               ))}
             </div>

@@ -9,11 +9,11 @@ class Job(Base):
 
     id          = Column(Integer, primary_key=True, index=True)
     title       = Column(String(256), nullable=False)
-    company     = Column(String(256))
+    org         = Column(String(256))
     location    = Column(String(256))
     description = Column(Text)
     url         = Column(String(512))
-    platform    = Column(String(64))
+    source      = Column(String(64))
     match_score = Column(Float, default=0.0)
     status      = Column(String(32), default="new")
     created_at  = Column(DateTime, default=datetime.utcnow)

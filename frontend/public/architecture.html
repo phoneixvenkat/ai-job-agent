@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobPilot AI — System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: #050A14;
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glow orbs */
+.orb { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; }
+.orb1 { width: 500px; height: 500px; background: rgba(59,130,246,0.12); top: -150px; left: -100px; }
+.orb2 { width: 400px; height: 400px; background: rgba(139,92,246,0.1); bottom: -100px; right: -100px; }
+.orb3 { width: 300px; height: 300px; background: rgba(6,182,212,0.08); top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+.page { position: relative; z-index: 1; padding: 40px; max-width: 1400px; margin: 0 auto; }
+
+/* Header */
+.header { text-align: center; margin-bottom: 50px; }
+.header-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 100px; padding: 6px 16px; margin-bottom: 16px;
+  font-size: 11px; color: #60a5fa; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.pulse { width: 6px; height: 6px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 2.5rem; font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #e2e8f0 0%, #60a5fa 50%, #06b6d4 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.header-sub { font-size: 12px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; }
+
+/* Main diagram container */
+.diagram { display: flex; flex-direction: column; gap: 20px; }
+
+/* Row layouts */
+.row { display: flex; align-items: stretch; gap: 16px; }
+.row-center { justify-content: center; }
+
+/* Arrow connectors */
+.arrow-down {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0; margin: -4px 0;
+  position: relative; z-index: 2;
+}
+.arrow-line {
+  width: 2px; height: 28px;
+  background: linear-gradient(180deg, rgba(59,130,246,0.6), rgba(6,182,212,0.6));
+  position: relative;
+}
+.arrow-line::after {
+  content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 7px solid rgba(6,182,212,0.7);
+}
+.arrow-label {
+  font-size: 9px; color: rgba(255,255,255,0.3);
+  letter-spacing: 0.08em; margin-top: 4px; text-transform: uppercase;
+}
+
+/* Multi arrow row */
+.arrows-row {
+  display: flex; justify-content: space-around;
+  padding: 0 5%;
+  position: relative;
+}
+.arrows-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), rgba(6,182,212,0.4), rgba(139,92,246,0.4), transparent);
+}
+.arrows-row .arrow-down { flex: 1; }
+
+/* Layer labels */
+.layer-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(255,255,255,0.15);
+  padding: 12px 8px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+/* === BOXES === */
+
+/* User Box */
+.user-box {
+  flex: 1; max-width: 900px; margin: 0 auto;
+  background: rgba(15,23,42,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; padding: 20px 28px;
+  display: flex; align-items: center; gap: 20px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.user-icon { font-size: 2rem; }
+.user-info h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.user-info p { font-size: 11px; color: rgba(255,255,255,0.4); }
+.user-inputs { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+.input-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 6px 12px; font-size: 11px; color: rgba(255,255,255,0.6);
+}
+
+/* Frontend Box */
+.frontend-box {
+  flex: 1;
+  background: rgba(10,20,40,0.9);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 16px; padding: 16px 20px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 30px rgba(59,130,246,0.08), inset 0 1px 0 rgba(59,130,246,0.1);
+}
+.box-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.box-icon { font-size: 1rem; }
+.box-title { font-family: 'Syne', sans-serif; font-size: 0.875rem; font-weight: 700; color: #fff; }
+.box-subtitle { font-size: 10px; color: rgba(255,255,255,0.35); margin-left: auto; }
+.pages-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.page-chip {
+  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 6px; padding: 6px 8px; text-align: center;
+  font-size: 10px; color: rgba(255,255,255,0.6);
+}
+.page-chip span { display: block; font-size: 14px; margin-bottom: 2px; }
+
+/* API Box */
+.api-box {
+  background: rgba(10,20,40,0.9);
+  border: 1px solid rgba(6,182,212,0.25);
+  border-radius: 16px; padding: 16px 20px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 30px rgba(6,182,212,0.06), inset 0 1px 0 rgba(6,182,212,0.1);
+  width: 100%;
+}
+.endpoints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.endpoint {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px; padding: 4px 10px; font-size: 10px;
+}
+.method { font-weight: 600; font-size: 9px; padding: 2px 5px; border-radius: 4px; }
+.get  { background: rgba(16,185,129,0.15); color: #10b981; }
+.post { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.patch { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.ep-path { color: rgba(255,255,255,0.5); font-size: 10px; }
+
+/* Orchestrator Box */
+.orchestrator-box {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.08) 100%);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 16px; padding: 18px 24px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 40px rgba(139,92,246,0.1), inset 0 1px 0 rgba(139,92,246,0.15);
+  position: relative; overflow: hidden;
+}
+.orchestrator-box::before {
+  content: 'LANGGRAPH';
+  position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+  font-size: 48px; font-weight: 800; color: rgba(139,92,246,0.06);
+  font-family: 'Syne', sans-serif; letter-spacing: -0.04em;
+  pointer-events: none;
+}
+.orch-inner { display: flex; align-items: center; gap: 20px; }
+.orch-icon { font-size: 1.75rem; }
+.orch-info h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: #a78bfa; }
+.orch-info p { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; }
+.orch-flow {
+  display: flex; align-items: center; gap: 8px; margin-left: auto;
+  flex-wrap: wrap; justify-content: flex-end;
+}
+.orch-step {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 8px; padding: 5px 10px; font-size: 10px; color: rgba(255,255,255,0.6);
+}
+.orch-arrow { color: rgba(139,92,246,0.5); font-size: 12px; }
+
+/* Agents row */
+.agents-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+.agent-box {
+  background: rgba(10,18,35,0.9);
+  border: 1px solid var(--agent-color-border);
+  border-radius: 14px; padding: 16px 12px;
+  text-align: center;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 20px var(--agent-glow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+}
+.agent-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--agent-color-top);
+}
+.agent-box:hover { transform: translateY(-3px); box-shadow: 0 8px 30px var(--agent-glow); }
+.agent-emoji { font-size: 1.5rem; margin-bottom: 8px; }
+.agent-name { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.agent-role { font-size: 9px; color: rgba(255,255,255,0.35); line-height: 1.4; }
+.agent-tag {
+  display: inline-block; margin-top: 8px;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--agent-color-tag);
+  background: var(--agent-color-bg);
+  border: 1px solid var(--agent-color-border);
+  border-radius: 4px; padding: 2px 6px;
+}
+
+/* Bottom row: Intelligence + Data + External */
+.bottom-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.2fr;
+  gap: 14px;
+}
+
+.intel-box {
+  background: rgba(10,18,35,0.9);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 14px; padding: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 20px rgba(16,185,129,0.05);
+}
+.intel-items { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.intel-item {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.1);
+  border-radius: 7px; padding: 7px 10px; font-size: 10px; color: rgba(255,255,255,0.6);
+}
+.intel-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.db-box {
+  background: rgba(10,18,35,0.9);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 14px; padding: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 20px rgba(245,158,11,0.05);
+}
+.db-items { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.db-item {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.1);
+  border-radius: 7px; padding: 7px 10px; font-size: 10px;
+}
+.db-table { color: #f59e0b; font-weight: 600; font-size: 10px; }
+.db-desc { color: rgba(255,255,255,0.35); font-size: 9px; }
+
+.sources-box {
+  background: rgba(10,18,35,0.9);
+  border: 1px solid rgba(236,72,153,0.2);
+  border-radius: 14px; padding: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 20px rgba(236,72,153,0.05);
+}
+.sources-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.source-item {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(236,72,153,0.05); border: 1px solid rgba(236,72,153,0.1);
+  border-radius: 7px; padding: 7px 10px; font-size: 10px; color: rgba(255,255,255,0.6);
+}
+.source-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* Tech stack footer */
+.tech-footer {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin-top: 10px;
+}
+.tech-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 100px; padding: 5px 12px;
+  font-size: 10px; color: rgba(255,255,255,0.4);
+}
+.tech-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* Legend */
+.legend {
+  display: flex; align-items: center; gap: 20px;
+  justify-content: center; margin-top: 30px;
+  padding: 14px 24px;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 7px; font-size: 10px; color: rgba(255,255,255,0.4); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Watermark */
+.watermark {
+  text-align: center; margin-top: 24px;
+  font-size: 10px; color: rgba(255,255,255,0.15); letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge"><span class="pulse"></span> System Architecture · v2.0</div>
+    <h1>JobPilot AI</h1>
+    <div class="header-sub">Multi-Agent Job Application Automation System · University of New Haven · MS Data Science Capstone 2026</div>
+  </div>
+
+  <div class="diagram">
+
+    <!-- USER LAYER -->
+    <div class="row row-center">
+      <div class="user-box">
+        <div class="user-icon">👤</div>
+        <div class="user-info">
+          <h3>User</h3>
+          <p>Job seeker interacts via React Dashboard</p>
+        </div>
+        <div class="user-inputs">
+          <div class="input-chip">📄 Resume PDF</div>
+          <div class="input-chip">🎯 Target Roles</div>
+          <div class="input-chip">📍 Location</div>
+          <div class="input-chip">✅ YES / ❌ NO</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div class="row row-center">
+      <div class="arrow-down">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">HTTP / Browser</div>
+      </div>
+    </div>
+
+    <!-- FRONTEND LAYER -->
+    <div class="row">
+      <div class="layer-label" style="color:rgba(59,130,246,0.4)">Frontend</div>
+      <div class="frontend-box" style="flex:1">
+        <div class="box-header">
+          <div class="box-icon">⚛️</div>
+          <div class="box-title">React Frontend</div>
+          <div class="box-subtitle">TypeScript · localhost:3000</div>
+        </div>
+        <div class="pages-grid">
+          <div class="page-chip"><span>⚡</span>Dashboard</div>
+          <div class="page-chip"><span>📄</span>Resume</div>
+          <div class="page-chip"><span>🔍</span>Job Hunt</div>
+          <div class="page-chip"><span>✅</span>Review</div>
+          <div class="page-chip"><span>📋</span>Applications</div>
+          <div class="page-chip"><span>📊</span>Analytics</div>
+          <div class="page-chip"><span>📚</span>Skill Map</div>
+          <div class="page-chip"><span>⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div class="row row-center">
+      <div class="arrow-down">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">REST API · Axios</div>
+      </div>
+    </div>
+
+    <!-- API LAYER -->
+    <div class="row">
+      <div class="layer-label" style="color:rgba(6,182,212,0.4)">API</div>
+      <div class="api-box" style="flex:1">
+        <div class="box-header">
+          <div class="box-icon">⚡</div>
+          <div class="box-title">FastAPI Backend</div>
+          <div class="box-subtitle">Python · localhost:8000 · 18 Endpoints</div>
+        </div>
+        <div class="endpoints">
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/resume/upload</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/jobs/search</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/resume/tailor</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/jobs/apply</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/jobs/skip</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/applications</span></div>
+          <div class="endpoint"><span class="method patch">PATCH</span><span class="ep-path">/api/applications/{id}</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/stats</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/orchestrate</span></div>
+          <div class="endpoint"><span class="method get">GET</span><span class="ep-path">/api/report/excel</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/email/scan</span></div>
+          <div class="endpoint"><span class="method post">POST</span><span class="ep-path">/api/interview/prep</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div class="row row-center">
+      <div class="arrow-down">
+        <div class="arrow-line"></div>
+        <div class="arrow-label">Invokes</div>
+      </div>
+    </div>
+
+    <!-- ORCHESTRATOR -->
+    <div class="row">
+      <div class="layer-label" style="color:rgba(139,92,246,0.4)">Orchestration</div>
+      <div class="orchestrator-box" style="flex:1">
+        <div class="orch-inner">
+          <div class="orch-icon">🧠</div>
+          <div class="orch-info">
+            <h3>LangGraph Orchestrator</h3>
+            <p>StateGraph coordinates all agents · Conditional routing · Error handling</p>
+          </div>
+          <div class="orch-flow">
+            <div class="orch-step">Scout</div>
+            <div class="orch-arrow">→</div>
+            <div class="orch-step">Deduplicate</div>
+            <div class="orch-arrow">→</div>
+            <div class="orch-step">Analyst</div>
+            <div class="orch-arrow">→</div>
+            <div class="orch-step">LLM Match?</div>
+            <div class="orch-arrow">→</div>
+            <div class="orch-step">Score</div>
+            <div class="orch-arrow">→</div>
+            <div class="orch-step">END</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spread arrows -->
+    <div class="arrows-row">
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+    </div>
+
+    <!-- 6 AGENTS -->
+    <div class="row">
+      <div class="layer-label" style="color:rgba(96,165,250,0.4)">Agents</div>
+      <div class="agents-row" style="flex:1">
+
+        <div class="agent-box" style="--agent-color-border:rgba(96,165,250,0.3); --agent-glow:rgba(96,165,250,0.08); --agent-color-top:linear-gradient(90deg,#3b82f6,#60a5fa); --agent-color-tag:#60a5fa; --agent-color-bg:rgba(96,165,250,0.08)">
+          <div class="agent-emoji">🔭</div>
+          <div class="agent-name">Scout Agent</div>
+          <div class="agent-role">Fetches jobs from 5 platforms. Dedup + freshness scoring.</div>
+          <div class="agent-tag">Discovery</div>
+        </div>
+
+        <div class="agent-box" style="--agent-color-border:rgba(6,182,212,0.3); --agent-glow:rgba(6,182,212,0.08); --agent-color-top:linear-gradient(90deg,#06b6d4,#22d3ee); --agent-color-tag:#06b6d4; --agent-color-bg:rgba(6,182,212,0.08)">
+          <div class="agent-emoji">🔍</div>
+          <div class="agent-name">Duplicate Agent</div>
+          <div class="agent-role">Agent 1: MD5 in-memory. Agent 2: MySQL DB check.</div>
+          <div class="agent-tag">2 Agents</div>
+        </div>
+
+        <div class="agent-box" style="--agent-color-border:rgba(16,185,129,0.3); --agent-glow:rgba(16,185,129,0.08); --agent-color-top:linear-gradient(90deg,#10b981,#34d399); --agent-color-tag:#10b981; --agent-color-bg:rgba(16,185,129,0.08)">
+          <div class="agent-emoji">🧪</div>
+          <div class="agent-name">Analyst Agent</div>
+          <div class="agent-role">TF-IDF + Groq LLM scoring. ATS check. Salary estimate.</div>
+          <div class="agent-tag">Intelligence</div>
+        </div>
+
+        <div class="agent-box" style="--agent-color-border:rgba(245,158,11,0.3); --agent-glow:rgba(245,158,11,0.08); --agent-color-top:linear-gradient(90deg,#f59e0b,#fcd34d); --agent-color-tag:#f59e0b; --agent-color-bg:rgba(245,158,11,0.08)">
+          <div class="agent-emoji">✍️</div>
+          <div class="agent-name">Writer Agent</div>
+          <div class="agent-role">Groq LLM tailors resume + cover letter per job JD.</div>
+          <div class="agent-tag">Generation</div>
+        </div>
+
+        <div class="agent-box" style="--agent-color-border:rgba(139,92,246,0.3); --agent-glow:rgba(139,92,246,0.08); --agent-color-top:linear-gradient(90deg,#8b5cf6,#a78bfa); --agent-color-tag:#a78bfa; --agent-color-bg:rgba(139,92,246,0.08)">
+          <div class="agent-emoji">📊</div>
+          <div class="agent-name">Tracker Agent</div>
+          <div class="agent-role">MySQL logging. Excel reports. Follow-ups. Pattern learning.</div>
+          <div class="agent-tag">Memory</div>
+        </div>
+
+        <div class="agent-box" style="--agent-color-border:rgba(236,72,153,0.3); --agent-glow:rgba(236,72,153,0.08); --agent-color-top:linear-gradient(90deg,#ec4899,#f472b6); --agent-color-tag:#ec4899; --agent-color-bg:rgba(236,72,153,0.08)">
+          <div class="agent-emoji">📧</div>
+          <div class="agent-name">Email Agent</div>
+          <div class="agent-role">IMAP Gmail scan. Classify emails. LinkedIn finder.</div>
+          <div class="agent-tag">Intel</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Spread arrows down to bottom -->
+    <div class="arrows-row" style="padding: 0 2%;">
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+      <div class="arrow-down"><div class="arrow-line"></div></div>
+    </div>
+
+    <!-- BOTTOM ROW: Intelligence + DB + External -->
+    <div class="row">
+      <div class="layer-label" style="color:rgba(16,185,129,0.4)">Data</div>
+      <div class="bottom-row" style="flex:1">
+
+        <!-- Intelligence -->
+        <div class="intel-box">
+          <div class="box-header">
+            <div class="box-icon">🧠</div>
+            <div class="box-title" style="color:#10b981">Intelligence Modules</div>
+          </div>
+          <div class="intel-items">
+            <div class="intel-item"><div class="intel-dot" style="background:#10b981"></div>TF-IDF Fit Scorer</div>
+            <div class="intel-item"><div class="intel-dot" style="background:#06b6d4"></div>Groq LLM Matcher (Llama 3.1)</div>
+            <div class="intel-item"><div class="intel-dot" style="background:#60a5fa"></div>App Score Explainer</div>
+            <div class="intel-item"><div class="intel-dot" style="background:#a78bfa"></div>Adaptive Pattern Learning</div>
+            <div class="intel-item"><div class="intel-dot" style="background:#f59e0b"></div>Rejection Analyzer</div>
+            <div class="intel-item"><div class="intel-dot" style="background:#ec4899"></div>Interview Prep Generator</div>
+          </div>
+        </div>
+
+        <!-- MySQL Database -->
+        <div class="db-box">
+          <div class="box-header">
+            <div class="box-icon">🗄️</div>
+            <div class="box-title" style="color:#f59e0b">MySQL 8.0 Database</div>
+          </div>
+          <div class="db-items">
+            <div class="db-item"><div class="db-table">jobs</div><div class="db-desc">· All fetched jobs</div></div>
+            <div class="db-item"><div class="db-table">applications</div><div class="db-desc">· Applied/skipped</div></div>
+            <div class="db-item"><div class="db-table">email_intel</div><div class="db-desc">· Email detections</div></div>
+            <div class="db-item"><div class="db-table">adaptive_patterns</div><div class="db-desc">· Learning data</div></div>
+            <div class="db-item"><div class="db-table">skill_gaps</div><div class="db-desc">· Weekly skills</div></div>
+          </div>
+        </div>
+
+        <!-- External Sources -->
+        <div class="sources-box">
+          <div class="box-header">
+            <div class="box-icon">🌐</div>
+            <div class="box-title" style="color:#ec4899">External Sources</div>
+          </div>
+          <div class="sources-grid">
+            <div class="source-item"><div class="source-dot" style="background:#10b981"></div>Greenhouse API</div>
+            <div class="source-item"><div class="source-dot" style="background:#60a5fa"></div>Lever API</div>
+            <div class="source-item"><div class="source-dot" style="background:#06b6d4"></div>LinkedIn Scraper</div>
+            <div class="source-item"><div class="source-dot" style="background:#f59e0b"></div>Remotive API</div>
+            <div class="source-item"><div class="source-dot" style="background:#a78bfa"></div>Indeed RSS</div>
+            <div class="source-item"><div class="source-dot" style="background:#ec4899"></div>Groq API (LLM)</div>
+            <div class="source-item"><div class="source-dot" style="background:#34d399"></div>Gmail IMAP</div>
+            <div class="source-item"><div class="source-dot" style="background:#fb7185"></div>Wellfound</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tech Stack -->
+    <div style="margin-top: 8px;">
+      <div class="tech-footer">
+        <div class="tech-chip"><div class="tech-dot" style="background:#60a5fa"></div>React + TypeScript</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#06b6d4"></div>FastAPI + Python</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#a78bfa"></div>LangGraph</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#10b981"></div>Groq Llama 3.1</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#f59e0b"></div>MySQL 8.0</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#ec4899"></div>scikit-learn TF-IDF</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#34d399"></div>openpyxl</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#fb7185"></div>python-docx</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#60a5fa"></div>pdfplumber</div>
+        <div class="tech-chip"><div class="tech-dot" style="background:#fcd34d"></div>BeautifulSoup4</div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,0.6)"></div>Frontend Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(6,182,212,0.6)"></div>API Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(139,92,246,0.6)"></div>Orchestration Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(96,165,250,0.6)"></div>Agent Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(16,185,129,0.6)"></div>Intelligence Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,0.6)"></div>Data Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(236,72,153,0.6)"></div>External Services</div>
+    </div>
+
+    <div class="watermark">
+      JobPilot AI · Venkatasaikumar Erla · MS Data Science · University of New Haven · Advisor: Dr. Moin Bhuiyan · 2026
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
