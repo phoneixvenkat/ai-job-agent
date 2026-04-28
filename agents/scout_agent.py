@@ -1,14 +1,11 @@
 import re
 import hashlib
 from job_sources.adzuna import fetch_adzuna
-from job_sources.greenhouse import fetch_all_greenhouse
-from job_sources.lever import fetch_all_lever
 from job_sources.remotive import fetch_remotive
-from job_sources.wellfound import fetch_wellfound
-from job_sources.indeed_rss import fetch_indeed_rss
-from job_sources.linkedin import fetch_linkedin
 from job_sources.jobicy import fetch_jobicy
-from job_sources.themuse import fetch_themuse
+from job_sources.arbeitnow import fetch_arbeitnow
+from job_sources.himalayas import fetch_himalayas
+from job_sources.usajobs import fetch_usajobs
 from database.mysql_db import save_jobs_to_db
 from backend.utils.logger import get_logger
 log = get_logger('scout')
@@ -53,61 +50,49 @@ def run_scout(config: dict, roles: list, location: str = "Remote",
     top_n    = filters.get("top_n", 20)
 
     all_jobs = []
+    seen_urls: set = set()
 
-    # ── Primary: Adzuna (country-native API) ─────────────────
+    def _add(jobs: list) -> None:
+        for j in jobs:
+            u = (j.get("url") or "").strip()
+            if u and u in seen_urls:
+                continue
+            if u:
+                seen_urls.add(u)
+            all_jobs.append(j)
+
+    # ── Primary: Adzuna (country-native API, requires keys) ──────────
     adzuna_jobs = []
     for role in roles:
         log.info(f"Fetching Adzuna [{country}] for '{role}'...")
         adzuna_jobs += fetch_adzuna(role, country=country, pages=3)
-    all_jobs += adzuna_jobs
+    _add(adzuna_jobs)
     log.info(f"Adzuna total: {len(adzuna_jobs)}")
 
-    if not adzuna_jobs:
-        # Adzuna unavailable — fall back to DB-filtered results for this country
-        log.warning(f"Adzuna returned 0 jobs. Falling back to DB filter for country='{country}'")
-        from database.mysql_db import get_all_jobs as db_get_jobs
-        db_jobs, _ = db_get_jobs(limit=50, location=country)
-        # Convert DB schema (company) back to scout schema (org)
-        for j in db_jobs:
-            j.setdefault("org", j.pop("company", ""))
-            j.setdefault("fit_score", 0)
-            j.setdefault("freshness_score", 5)
-        all_jobs += db_jobs
-        log.info(f"DB fallback: {len(db_jobs)} jobs for country='{country}'")
-
-    # ── Secondary: Remotive (worldwide remote) ────────────────
-    remotive_start = len(all_jobs)
+    # ── Free sources: work for any country / remote ──────────────────
     for role in roles:
         log.info(f"Fetching Remotive for '{role}'...")
-        all_jobs += fetch_remotive(role, limit=15)
-    log.info(f"Remotive: {len(all_jobs) - remotive_start} jobs")
+        _add(fetch_remotive(role, limit=15))
 
-    # ── Supplemental: location-aware sources ─────────────────
-    # Use country as the location signal for these sources
-    loc_hint = location if location.lower() not in ("remote", "anywhere", "") else country
-    for role in roles:
-        log.info(f"Fetching LinkedIn for '{role}' [{loc_hint}]...")
-        all_jobs += fetch_linkedin(role, loc_hint, limit=10)
-        log.info(f"Fetching Jobicy for '{role}'...")
-        all_jobs += fetch_jobicy(role, limit=10, location=country)
-        log.info(f"Fetching TheMuse for '{role}'...")
-        all_jobs += fetch_themuse(role, limit=10, location=country)
+        log.info(f"Fetching Jobicy for '{role}' [{country}]...")
+        _add(fetch_jobicy(role, limit=15, location=country))
 
-    # ── Greenhouse / Lever only when country is USA or not specified ──
-    if country.lower() in ("usa", "united states", "remote", ""):
-        gh_orgs = sources.get("greenhouse", [])
-        if gh_orgs:
-            log.info("Fetching Greenhouse...")
-            all_jobs += fetch_all_greenhouse(gh_orgs)
-        lv_orgs = sources.get("lever", [])
-        if lv_orgs:
-            log.info("Fetching Lever...")
-            all_jobs += fetch_all_lever(lv_orgs)
+        log.info(f"Fetching Himalayas for '{role}'...")
+        _add(fetch_himalayas(role, limit=20))
 
-    log.info(f"Total fetched: {len(all_jobs)}")
+        log.info(f"Fetching Arbeitnow for '{role}' [{country}]...")
+        _add(fetch_arbeitnow(role, country=country, limit=20))
+
+    # ── USAJobs: US government roles (no key needed) ─────────────────
+    if country.lower() in ("usa", "united states", "us", "remote", ""):
+        for role in roles:
+            log.info(f"Fetching USAJobs for '{role}'...")
+            _add(fetch_usajobs(role, limit=25))
+
+    log.info(f"Total fetched (url-deduped): {len(all_jobs)}")
 
     all_jobs = deduplicate(all_jobs)
-    log.info(f"After deduplication: {len(all_jobs)}")
+    log.info(f"After title+org deduplication: {len(all_jobs)}")
 
     matched = [j for j in all_jobs if match_job(j, required, exclude)]
     log.info(f"After config filtering: {len(matched)}")
@@ -119,7 +104,7 @@ def run_scout(config: dict, roles: list, location: str = "Remote",
 
     saved, skipped = save_jobs_to_db(matched[:top_n])
     log.info(f"[OK] Persisted {saved} new jobs ({skipped} duplicates skipped) | "
-             f"Country: {country}, Adzuna: {len(adzuna_jobs)}, Total: {len(all_jobs)}")
+             f"Country: {country}, Adzuna: {len(adzuna_jobs)}, Total unique: {len(all_jobs)}")
 
     return {
         "status":  "success",
